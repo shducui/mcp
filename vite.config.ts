@@ -6,24 +6,25 @@ export default defineConfig({
   plugins: [vue()],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/main.ts'), // Web Component 的入口文件
-      name: 'AiChatBubble', // 全局变量名，如果需要
+      entry: resolve(__dirname, 'src/main.ts'),
+      name: 'AiChatBubble',
       fileName: (format) => `ai-chat-bubble.${format}.js`,
-      formats: ['es', 'umd'], // 同时生成 ES Module 和 UMD 格式
+      formats: ['es', 'umd'],
     },
+    // 删除或注释掉整个 rollupOptions.external 和 output.globals
+    
     rollupOptions: {
-      external: ['vue'], // 将 Vue 作为外部依赖，如果宿主页面已经有 Vue，可以避免重复打包
+      // external: ['vue'], // <--- 删除这一行
       output: {
         globals: {
-          vue: 'Vue',
+          // vue: 'Vue', // <--- 删除这一行
         },
-        // 配置 Web Component 的 CSS 文件内联到 JS 中
         inlineDynamicImports: true,
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'style.css') {
-            return 'ai-chat-bubble.css'; // 如果需要单独的 CSS 文件
+            return 'ai-chat-bubble.css';
           }
-          return assetInfo.name ?? 'asset-[hash][extname]';
+          return assetInfo.name ?? 'asset-[name][extname]';
         },
       },
     },
