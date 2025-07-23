@@ -5,6 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [vue()],
   build: {
+    target: 'esnext', 
     lib: {
       entry: resolve(__dirname, 'src/main.ts'),
       name: 'AiChatBubble',
@@ -16,17 +17,20 @@ export default defineConfig({
     rollupOptions: {
       // external: ['vue'], // <--- 删除这一行
       output: {
-        globals: {
-          // vue: 'Vue', // <--- 删除这一行
-        },
-        inlineDynamicImports: true,
+        // globals: {
+        //   // vue: 'Vue', // <--- 删除这一行
+        // },
+        // inlineDynamicImports: true,
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'style.css') {
             return 'ai-chat-bubble.css';
           }
           return assetInfo.name ?? 'asset-[name][extname]';
         },
+         inlineDynamicImports: true, // 确保所有动态导入都合并到单个文件中
       },
     },
+    // 可选：如果不需要生成 sourcemap，可以将其设置为 false 以减小文件大小
+    sourcemap: false,
   },
 });
