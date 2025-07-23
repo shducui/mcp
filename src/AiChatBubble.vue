@@ -12,14 +12,15 @@
     >AI</div>
 
     <!-- 聊天面板关闭按钮 -->
-    <div
+   
+
+    <!-- 聊天面板 -->
+    <div v-if="isChatOpen" class="chat-panel" >
+       <div
       v-if="isChatOpen"
       class="close-btn"
       @click="toggleChat"
     >×</div>
-
-    <!-- 聊天面板 -->
-    <div v-if="isChatOpen" class="chat-panel">
       <div class="messages">
         <div v-if="messages.length === 0" class="msg-empty">
           有什么可以帮您的吗？
@@ -183,7 +184,7 @@ onMounted(()=>{
 
 /* 聊天面板 */
 .chat-panel {
-  position:absolute;
+  position:relative;;
   top:0; left:80px; /* 紧邻悬浮球右侧 */
   width:300px; height:400px;
   background:#fff; border-radius:8px;
