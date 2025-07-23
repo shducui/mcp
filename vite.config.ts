@@ -1,39 +1,38 @@
-// vite.config.ts
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [
     vue({
+      // 将 .vue 文件编译为可注册的 Custom Element
       customElement: true,
-      template: { compilerOptions: { scopeId: '' } }
+      // 取消默认生成的 scopeId，因为我们要内联样式且不采用 scoped
+      template: { compilerOptions: {} }
     }),
   ],
   define: {
+    // 兼容 process.env 使用
     'process.env': {}
   },
   build: {
     target: 'esnext',
     lib: {
-      entry: 'src/AiChatBubble.vue',
-      name: 'ai-chat-bubble',
-      formats: ['es'],
-      fileName: 'ai-chat-bubble'
+      // 打包入口指向 Vue SFC，内部会包含 defineCustomElement 注册逻辑
+      entry: 'src/entry.ts',
+      name: 'AiChatBubble',
+      // 输出两种格式：ES Module 和 UMD
+      formats: ['es', 'umd'],
+      fileName: (format) => `ai-chat-bubble.${format}.js`
     },
-    // **** 关键改动：禁用 CSS 代码分割，让 CSS 内联到 JS 中 ****
-    cssCodeSplit: false, 
+    // 禁用 CSS 拆分，样式会内联到 JS 中
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
+        // 保证动态导入被内联，单文件输出
         inlineDynamicImports: true,
-        // **** 移除 CSS 文件的 assetFileNames 规则，因为它不再是独立文件 ****
-        assetFileNames: (assetInfo) => {
-          // if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-          //   return 'ai-chat-bubble.css'; // 这行现在不需要了
-          // }
-          return assetInfo.name ?? '[name]-[hash][extname]';
-        },
-      },
+      }
     },
+    // 可根据需求开启 sourcemap
     sourcemap: false,
-  },
+  }
 })
