@@ -46,6 +46,20 @@ const kokoroTool = await kokoroClient.tools();
   return defineEventHandler(async (event) => {
     console.log('Received a new request to /api/chat.');
 
+
+// 设置 CORS 头
+    event.res.setHeader('Access-Control-Allow-Origin', '*'); // 允许所有来源，生产环境应限制为特定域名
+    event.res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); // 允许的方法
+    event.res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // 允许的请求头
+    event.res.setHeader('Access-Control-Max-Age', '86400'); // 预检请求的缓存时间
+
+    // 处理 OPTIONS 请求（CORS 预检请求）
+    if (event.req.method === 'OPTIONS') {
+      event.res.statusCode = 204; // No Content
+      return '';
+    }
+
+    
     try {
       const { messages: userMessages } = await readBody<{ messages: CoreMessage[] }>(event);
       console.log('Request body parsed. Messages received:', userMessages.length);
