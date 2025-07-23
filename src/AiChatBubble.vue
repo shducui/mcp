@@ -16,7 +16,6 @@ const { messages, input, handleSubmit, isLoading } = useChat({ api: props.apiUrl
 // ASR (语音识别) 功能
 const { isRecording, start: startRecording, stop: stopRecording } = useAudioRecorder((transcript) => {
   const text = transcript.trim();
-  // -------- 语音命令处理 (已精简) --------
   if (["发送", "提交", "发出"].includes(text)) {
     handleSubmit();
     return;
@@ -25,25 +24,22 @@ const { isRecording, start: startRecording, stop: stopRecording } = useAudioReco
     input.value = '';
     return;
   }
-  // 默认是文字输入
   input.value = text;
 });
 
 // =================================================================
-// UI 状态控制
+// UI 状态与位置控制
 // =================================================================
 const isChatOpen = ref(false);
-
-// 悬浮球的位置
 const bubblePos = reactive({ x: 0, y: 0 });
+const containerRef = ref<HTMLElement | null>(null); // 引用容器元素
 
-// 切换聊天窗口的显示状态
 function toggleChat() {
   isChatOpen.value = !isChatOpen.value;
 }
 
 // =================================================================
-// 功能辅助函数 (音频, 骰子)
+// 功能辅助函数
 // =================================================================
 const audioRef = ref<HTMLAudioElement | null>(null);
 
@@ -59,10 +55,7 @@ function extractAudioSrc(html: string): string | null {
 const isRollingDice = computed(() => {
   if (!isLoading.value) return false;
   const lastUserMessage = [...messages.value].reverse().find(m => m.role === 'user');
-  if (lastUserMessage && /摇骰子|摇色子|掷骰子/.test(lastUserMessage.content)) {
-    return true;
-  }
-  return false;
+  return !!(lastUserMessage && /摇骰子|摇色子|掷骰子/.test(lastUserMessage.content));
 });
 
 // =================================================================
@@ -74,19 +67,20 @@ watch(messages, async (msgs) => {
     const src = extractAudioSrc(last.content);
     if (!src) return;
     await nextTick();
-    audioRef.value?.play().catch(() => {
-      console.warn('Audio autoplay was prevented by the browser.');
-    });
+    audioRef.value?.play().catch(() => console.warn('Audio autoplay was prevented.'));
   }
 }, { deep: true });
 
 // =================================================================
-// 拖拽逻辑
+// 拖拽逻辑 (已重构并修复 Bug)
 // =================================================================
 const isDragging = ref(false);
 
 function startDrag(e: MouseEvent) {
   e.preventDefault();
+  const el = containerRef.value;
+  if (!el) return;
+
   const startX = e.clientX;
   const startY = e.clientY;
   const origX = bubblePos.x;
@@ -97,53 +91,62 @@ function startDrag(e: MouseEvent) {
     const dx = ev.clientX - startX;
     const dy = ev.clientY - startY;
 
-    // 只有当移动超过一个很小的阈值时才认为是拖拽
     if (!hasMoved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        hasMoved = true;
-        isDragging.value = true;
+      hasMoved = true;
+      isDragging.value = true;
     }
 
     if (hasMoved) {
-        bubblePos.x = origX + dx;
-        bubblePos.y = origY + dy;
+      const newX = origX + dx;
+      const newY = origY + dy;
+
+      // 边界检查，防止拖出屏幕外
+      if (!el) return;
+      const elWidth = el.offsetWidth;
+      const elHeight = el.offsetHeight;
+      const boundedX = Math.max(0, Math.min(newX, window.innerWidth - elWidth));
+      const boundedY = Math.max(0, Math.min(newY, window.innerHeight - elHeight));
+
+      bubblePos.x = boundedX;
+      bubblePos.y = boundedY;
     }
   }
 
   function onMouseUp() {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
-    // 使用 nextTick 确保 click 事件在 isDragging 状态更新后触发
-    nextTick(() => {
-        isDragging.value = false;
-    });
+    // 延迟重置 isDragging 状态，以防止拖拽结束时触发点击事件
+    setTimeout(() => {
+      isDragging.value = false;
+    }, 10);
   }
 
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 }
 
-// 点击悬浮球的逻辑：如果不是在拖拽，则切换聊天窗口
 function handleBubbleClick() {
-    if (!isDragging.value) {
-        toggleChat();
-    }
+  if (!isDragging.value) {
+    toggleChat();
+  }
 }
 
 // =================================================================
-// 组件挂载时设置悬浮球初始位置
+// 组件挂载时设置初始位置
 // =================================================================
 onMounted(() => {
+  const el = containerRef.value;
+  if (!el) return;
   // 初始位置设置在右下角
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  // 假设按钮大小为 70px，边距为 20px
-  bubblePos.x = vw - 70 - 20;
-  bubblePos.y = vh - 70 - 20;
+  const initialMargin = 20;
+  bubblePos.x = window.innerWidth - el.offsetWidth - initialMargin;
+  bubblePos.y = window.innerHeight - el.offsetHeight - initialMargin;
 });
 </script>
 
 <template>
   <div
+    ref="containerRef"
     class="ai-bubble-container"
     :style="{ left: bubblePos.x + 'px', top: bubblePos.y + 'px' }"
   >
@@ -152,73 +155,48 @@ onMounted(() => {
       @click="handleBubbleClick"
       @mousedown="startDrag"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="white"
-        width="38px"
-        height="38px"
-      >
-        <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
-        <path d="M0 0h24v24H0z" fill="none"/>
-      </svg>
+      :)
     </div>
 
+    <button v-if="isChatOpen" class="chat-close-button" @click="toggleChat">
+      ✕
+    </button>
+
     <div v-if="isChatOpen" class="chat-main">
-      <div class="toolbar">
-        <div class="toolbar-title">AI助手</div>
-        <button class="toolbar-btn close-chat-btn" @click="toggleChat">❌</button>
-      </div>
-
       <div class="messages-area">
-        <div
-          v-for="m in messages"
-          :key="m.id"
-          class="message-wrapper"
-          :class="{ 'is-user': m.role === 'user' }"
-        >
-          <div class="message-row">
-            <template v-if="m.role === 'assistant'">
-              <div class="message-bubble ai-bubble">
-                <audio
-                  v-if="m.content.trim().startsWith('<audio')"
-                  ref="audioRef"
-                  :src="extractAudioSrc(m.content) ?? ''"
-                  controls
-                  autoplay
-                ></audio>
-                <p v-else class="text-content">{{ m.content }}</p>
-              </div>
-            </template>
-
-            <template v-else-if="m.role === 'user'">
-              <div class="message-bubble user-bubble">
-                <p class="text-content">{{ m.content }}</p>
-              </div>
-            </template>
-          </div>
+        <div v-if="messages.length === 0" class="welcome-message">
+          有什么可以帮您的吗？
         </div>
 
-        <div v-if="isLoading" class="message-wrapper">
-          <div class="message-row">
-            <div class="message-bubble ai-bubble">
-              <div v-if="isRollingDice" class="dice-animation">
-                <span class="die">⚀</span>
-                <span class="die">⚂</span>
-                <span class="die">⚅</span>
-              </div>
-              <div v-else>思考中...</div>
-            </div>
-          </div>
+        <div v-for="m in messages" :key="m.id" class="message-entry">
+          <p :class="m.role === 'user' ? 'message-user' : 'message-ai'">
+            <audio
+              v-if="m.content.trim().startsWith('<audio')"
+              ref="audioRef"
+              :src="extractAudioSrc(m.content) ?? ''"
+              controls
+              autoplay
+            ></audio>
+            <span v-else>{{ m.content }}</span>
+          </p>
+        </div>
+
+        <div v-if="isLoading" class="message-entry">
+          <p class="message-ai">
+            <span v-if="isRollingDice" class="dice-animation">
+              <span class="die">⚀</span><span class="die">⚂</span><span class="die">⚅</span>
+            </span>
+            <span v-else>思考中...</span>
+          </p>
         </div>
       </div>
 
       <form @submit.prevent="handleSubmit" class="input-form">
         <textarea
           v-model="input"
-          placeholder="请输入您的问题..."
+          placeholder="请输入..."
           class="chat-textarea"
-          rows="2"
+          rows="1"
           @keydown.enter.exact.prevent="handleSubmit"
         ></textarea>
         <button
@@ -227,213 +205,199 @@ onMounted(() => {
           class="mic-button"
           :class="{ 'is-listening': isRecording }"
           title="语音输入"
-        >
-          🎤
-        </button>
-        <button type="submit" :disabled="isLoading">发送</button>
+        >🎤</button>
+        <button type="submit" :disabled="isLoading || !input.trim()" class="send-button">➤</button>
       </form>
     </div>
-
-    </div>
+  </div>
 </template>
 
 <style>
-/* 所有样式都直接写在这里，因为 Web Component 的 Shadow DOM 会自动封装它们 */
-
-/* 整体容器：定位悬浮球及其相关弹窗 */
-.ai-bubble-container {
-  position: fixed; /* 改为通过 left/top 定位 */
-  z-index: 9999;
-  font-family: "Microsoft YaHei", sans-serif;
+/* 确保所有元素盒模型一致 */
+.ai-bubble-container * {
   box-sizing: border-box;
 }
 
-/* 悬浮球按钮样式 - 已修改 */
+/* 整体容器 */
+.ai-bubble-container {
+  position: fixed;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 悬浮球按钮样式 - 全新外观 */
 .floating-button {
-  width: 70px;  /* 增大尺寸 */
-  height: 70px; /* 增大尺寸 */
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background-color: #007bff;
+  background: linear-gradient(135deg, #FFD700, #FFA500); /* 黄色到橙色渐变 */
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
-  cursor: grab; /* 默认显示为可抓取手势 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.3s, transform 0.3s;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: grab;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease-in-out;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  user-select: none; /* 防止拖拽时选中文本 */
 }
 .floating-button:active {
-    cursor: grabbing; /* 拖拽时变为抓紧手势 */
+  cursor: grabbing;
+  transform: scale(0.95);
 }
-.floating-button:hover {
-  background-color: #0056b3;
-  transform: scale(1.05);
+
+/* 关闭按钮 - 新增 */
+.chat-close-button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: 1px solid white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10001;
+  padding: 0;
+  line-height: 1;
+}
+.chat-close-button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 /* 聊天主窗口样式 */
 .chat-main {
   position: absolute;
-  bottom: 85px; /* 向上偏移，以便在悬浮球上方显示 */
+  bottom: 75px; /* 向上偏移 */
   right: 0;
-  width: 380px;
-  height: 500px; /* 固定高度 */
+  width: 350px; /* 宽度调小 */
+  height: 450px; /* 高度调小 */
   background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border: 1px solid #e0e0e0;
 }
 
-/* 工具栏 - 已修改 */
-.toolbar {
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* 使元素分散对齐 */
-  background-color: #f7f7f7;
-  flex-shrink: 0;
-}
-.toolbar-title {
-  font-weight: bold;
-  color: #333;
-}
-.close-chat-btn {
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.2rem 0.5rem;
-}
-
-/* 消息区域 */
+/* 消息区域 - 已重构 */
 .messages-area {
   flex: 1;
-  padding: 1rem;
+  padding: 12px;
   overflow-y: auto;
-  background-color: #ffffff;
+  background-color: #f9f9f9;
 }
-.message-wrapper {
-  margin-bottom: 0.8rem;
-  display: flex;
+.welcome-message {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 20px 0;
 }
-.message-wrapper.is-user {
-  justify-content: flex-end; /* 用户消息靠右对齐 */
+.message-entry {
+  margin-bottom: 10px;
 }
-.message-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  max-width: 100%;
-}
-/* message-label 样式已移除 */
-.message-bubble {
-  padding: 0.6rem 1rem;
-  border-radius: 18px;
-  max-width: 100%; /* 气泡最大宽度，由 message-row 的 flex 决定 */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  word-break: break-word;
-  white-space: pre-wrap;
-  font-size: 0.95rem;
-}
-.ai-bubble {
-  background-color: #E9ECEF; /* AI 消息气泡为灰色 */
-  color: #212529;
-}
-.user-bubble {
-  background-color: #007bff; /* 用户消息气泡为蓝色 */
-  color: white;
-}
-.text-content {
+.message-entry p {
   margin: 0;
   padding: 0;
-  line-height: 1.6;
+  line-height: 1.5;
+  font-size: 14px; /* 调小字体 */
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
-.message-bubble audio {
-  width: 100%;
-  max-width: 250px;
-  height: 30px;
+.message-user {
+  color: #007bff; /* 用户消息为蓝色 */
+}
+.message-ai {
+  color: #000000; /* AI 消息为黑色 */
 }
 
 /* 输入区域 */
 .input-form {
   flex-shrink: 0;
   display: flex;
-  padding: 0.5rem;
-  border-top: 1px solid #eee;
+  padding: 8px;
+  border-top: 1px solid #e0e0e0;
   align-items: center;
-  background-color: #f7f7f7;
+  background-color: #ffffff;
 }
 .chat-textarea {
   flex: 1;
-  padding: 0.6rem;
-  font-size: 1rem;
+  padding: 8px 12px;
+  font-size: 14px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 18px; /* 更圆润的输入框 */
   resize: none;
-  line-height: 1.5;
-  height: 3rem;
+  line-height: 1.4;
+  height: 36px;
+  max-height: 100px;
   overflow-y: auto;
+  background-color: #f4f4f4;
+}
+.chat-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  background-color: #fff;
 }
 .input-form button {
-  margin-left: 0.5rem;
-  padding: 0.6rem 1rem;
-  background: #007bff;
-  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: 50%;
   cursor: pointer;
   transition: background-color 0.2s;
-  font-size: 1rem;
+  font-size: 16px;
 }
-.input-form button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
-}
-.input-form button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-/* 骰子动画 */
-.dice-animation {
-  display: inline-flex;
-  gap: 0.5rem;
-  font-size: 1.5rem;
-  padding: 0.5rem 0;
-}
-.dice-animation .die {
-  display: inline-block;
-  animation: roll 0.7s infinite ease-in-out;
-}
-.dice-animation .die:nth-child(2) { animation-delay: 0.1s; }
-.dice-animation .die:nth-child(3) { animation-delay: 0.2s; }
-
-@keyframes roll {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(0.8); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-
-/* 麦克风按钮动画 */
 .mic-button {
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.6rem;
-  cursor: pointer;
-  margin-left: 0.5rem;
-  font-size: 1.2rem;
+  color: #555;
+  background: transparent;
+}
+.mic-button:hover {
+  background-color: #f0f0f0;
 }
 .mic-button.is-listening {
   background-color: #28a745 !important;
   color: white;
-  box-shadow: 0 0 8px #28a745;
   animation: pulse 1.2s infinite;
 }
+.send-button {
+  background: #007bff;
+  color: #fff;
+}
+.send-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+.send-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
 
+/* 骰子动画 */
+.dice-animation .die {
+  display: inline-block;
+  animation: roll 0.7s infinite ease-in-out;
+  margin: 0 2px;
+}
+.dice-animation .die:nth-child(2) { animation-delay: 0.1s; }
+.dice-animation .die:nth-child(3) { animation-delay: 0.2s; }
+@keyframes roll {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-5px) rotate(180deg); }
+}
+
+/* 脉冲动画 */
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
   70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
