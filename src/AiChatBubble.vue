@@ -148,25 +148,37 @@ onMounted(()=>{
 .ai-bubble-container { position: fixed; z-index:9999; font-size:12px; }
 
 /* 悬浮球 */
+/* 悬浮球: 蓝紫渐变（调整为浅一些的配色） */
 .floating-ball {
   width: 70px; height: 70px;
   border-radius: 50%;
-  background: linear-gradient(45deg,#6a11cb,#2575fc); /* 蓝紫渐变 */
-  color:#fff; font-weight:600; font-size:18px;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 4px 12px rgba(0,0,0,0.3);
-  cursor:grab; user-select:none;
+  /* 更浅的蓝紫渐变 */
+  background: linear-gradient(45deg, #7b64d3, #5a8cf3);
+  color: #fff; font-weight: 600; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: grab; user-select: none;
 }
+.floating-ball:active { cursor: grabbing; transform: scale(0.95); }
 .floating-ball:active { cursor:grabbing; transform:scale(0.95); }
 
 /* 关闭 × */
+/* 关闭按钮: 固定在聊天面板右上角 */
 .close-btn {
-  position:absolute; top:8px; right:8px; /* 聊天面板内右上角 */
-  width:24px; height:24px; line-height:24px;
-  background:rgba(0,0,0,0.6); color:#fff;
-  border-radius:50%; text-align:center;
-  cursor:pointer; font-size:14px;
-  z-index:10;
+  position: absolute;
+  /* 相对于 .chat-panel 定位 */
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border-radius: 50%;
+  text-align: center;
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 10;
 }
 
 /* 聊天面板 */
