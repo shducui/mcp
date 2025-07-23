@@ -11,7 +11,7 @@
       @click="handleBubbleClick"
     >AI</div>
 
-    <!-- 关闭按钮 -->
+    <!-- 聊天面板关闭按钮 -->
     <div
       v-if="isChatOpen"
       class="close-btn"
@@ -75,13 +75,8 @@ import { useChat } from '@ai-sdk/vue'
 import { ref, watch, reactive, computed, onMounted } from 'vue'
 import { useAudioRecorder } from '../composables/useAudioRecorder'
 
-// props
 const props = defineProps<{ apiUrl: string }>()
-
-// chat hook
 const { messages, input, handleSubmit, isLoading } = useChat({ api: props.apiUrl })
-
-// asr
 const { isRecording, start, stop } = useAudioRecorder((text) => {
   const t = text.trim()
   if (['发送','提交','发出'].includes(t)) return void handleSubmit()
@@ -89,37 +84,31 @@ const { isRecording, start, stop } = useAudioRecorder((text) => {
   input.value = t
 })
 
-// 位置与状态
 const isChatOpen = ref(false)
 const bubblePos = reactive({ x: 0, y: 0 })
 const containerRef = ref<HTMLElement|null>(null)
+const isDragging = ref(false)
 
-// 切换聊天面板
 function toggleChat() {
   isChatOpen.value = !isChatOpen.value
 }
 
-// 点击球
 function handleBubbleClick() {
   if (!isDragging.value) toggleChat()
 }
 
-// 音频检测
 function isAudioUrl(c: string) { return c.trim().startsWith('<audio') }
 function extractAudioSrc(h: string) {
   const m = h.match(/src="([^"]+)"/)
   return m ? m[1] : null
 }
 
-// 骰子检测
 const isRollingDice = computed(() => {
   if (!isLoading.value) return false
   const u = [...messages.value].reverse().find(m=>m.role==='user')
   return !!(u && /摇骰子|掷骰子/.test(u.content))
 })
 
-// 拖拽
-const isDragging = ref(false)
 function startDrag(e: MouseEvent) {
   e.preventDefault()
   const el = containerRef.value!
@@ -133,8 +122,8 @@ function startDrag(e: MouseEvent) {
       moved = true; isDragging.value = true
     }
     if (moved) {
-      const nx = Math.min(Math.max(0, ox+dx), window.innerWidth-el.offsetWidth)
-      const ny = Math.min(Math.max(0, oy+dy), window.innerHeight-el.offsetHeight)
+      const nx = Math.min(Math.max(0, ox+dx), window.innerWidth - el.offsetWidth)
+      const ny = Math.min(Math.max(0, oy+dy), window.innerHeight - el.offsetHeight)
       bubblePos.x = nx; bubblePos.y = ny
     }
   }
@@ -147,7 +136,6 @@ function startDrag(e: MouseEvent) {
   document.addEventListener('mouseup', mu)
 }
 
-// 初始位置
 onMounted(()=>{
   const el = containerRef.value!
   const m = 20
@@ -163,7 +151,7 @@ onMounted(()=>{
 .floating-ball {
   width: 70px; height: 70px;
   border-radius: 50%;
-  background: linear-gradient(45deg,#FF5722,#FFC107);
+  background: linear-gradient(45deg,#6a11cb,#2575fc); /* 蓝紫渐变 */
   color:#fff; font-weight:600; font-size:18px;
   display:flex; align-items:center; justify-content:center;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
@@ -173,16 +161,18 @@ onMounted(()=>{
 
 /* 关闭 × */
 .close-btn {
-  position:absolute; top:-8px; right:-8px;
+  position:absolute; top:8px; right:8px; /* 聊天面板内右上角 */
   width:24px; height:24px; line-height:24px;
   background:rgba(0,0,0,0.6); color:#fff;
   border-radius:50%; text-align:center;
   cursor:pointer; font-size:14px;
+  z-index:10;
 }
 
 /* 聊天面板 */
 .chat-panel {
-  position:absolute; bottom:80px; right:0;
+  position:absolute;
+  top:0; left:80px; /* 紧邻悬浮球右侧 */
   width:300px; height:400px;
   background:#fff; border-radius:8px;
   box-shadow:0 8px 24px rgba(0,0,0,0.15);

@@ -7108,38 +7108,38 @@ const Af = {
       if (["发送", "提交", "发出"].includes(V)) return void o();
       if (["清空", "清除", "删除"].includes(V)) return void (r.value = "");
       r.value = V;
-    }), f = tt(!1), d = Nn({ x: 0, y: 0 }), u = tt(null);
-    function g() {
+    }), f = tt(!1), d = Nn({ x: 0, y: 0 }), u = tt(null), g = tt(!1);
+    function m() {
       f.value = !f.value;
     }
-    function m() {
-      H.value || g();
-    }
-    function C(D) {
-      return D.trim().startsWith("<audio");
+    function C() {
+      g.value || m();
     }
     function A(D) {
+      return D.trim().startsWith("<audio");
+    }
+    function J(D) {
       const V = D.match(/src="([^"]+)"/);
       return V ? V[1] : null;
     }
-    const J = go(() => {
+    const H = go(() => {
       if (!s.value) return !1;
       const D = [...n.value].reverse().find((V) => V.role === "user");
       return !!(D && /摇骰子|掷骰子/.test(D.content));
-    }), H = tt(!1);
+    });
     function F(D) {
       D.preventDefault();
       const V = u.value, E = D.clientX, w = D.clientY, k = d.x, $ = d.y;
       let R = !1;
       function z(re) {
         const se = re.clientX - E, be = re.clientY - w;
-        if (!R && (Math.abs(se) > 5 || Math.abs(be) > 5) && (R = !0, H.value = !0), R) {
+        if (!R && (Math.abs(se) > 5 || Math.abs(be) > 5) && (R = !0, g.value = !0), R) {
           const _e = Math.min(Math.max(0, k + se), window.innerWidth - V.offsetWidth), ce = Math.min(Math.max(0, $ + be), window.innerHeight - V.offsetHeight);
           d.x = _e, d.y = ce;
         }
       }
       function de() {
-        document.removeEventListener("mousemove", z), document.removeEventListener("mouseup", de), setTimeout(() => H.value = !1, 10);
+        document.removeEventListener("mousemove", z), document.removeEventListener("mouseup", de), setTimeout(() => g.value = !1, 10);
       }
       document.addEventListener("mousemove", z), document.addEventListener("mouseup", de);
     }
@@ -7155,12 +7155,12 @@ const Af = {
       ht("div", {
         class: "floating-ball",
         onMousedown: F,
-        onClick: m
+        onClick: C
       }, "AI", 32),
       f.value ? (ke(), Fe("div", {
         key: 0,
         class: "close-btn",
-        onClick: g
+        onClick: m
       }, "×")) : Vn("", !0),
       f.value ? (ke(), Fe("div", Af, [
         ht("div", Rf, [
@@ -7169,9 +7169,9 @@ const Af = {
             key: E.id,
             class: an(["msg-line", E.role === "user" ? "msg-user" : "msg-ai"])
           }, [
-            C(E.content) ? (ke(), Fe("audio", {
+            A(E.content) ? (ke(), Fe("audio", {
               key: 0,
-              src: A(E.content),
+              src: J(E.content),
               controls: "",
               autoplay: ""
             }, null, 8, Mf)) : (ke(), Fe($e, { key: 1 }, [
@@ -7179,7 +7179,7 @@ const Af = {
             ], 64))
           ], 2))), 128)),
           pe(s) ? (ke(), Fe("div", kf, [
-            J.value ? (ke(), Fe("span", $f, "⚀⚂⚅")) : (ke(), Fe("span", jf, "思考中..."))
+            H.value ? (ke(), Fe("span", $f, "⚀⚂⚅")) : (ke(), Fe("span", jf, "思考中..."))
           ])) : Vn("", !0)
         ]),
         ht("form", {
@@ -7218,7 +7218,7 @@ const Af = {
       ])) : Vn("", !0)
     ], 4));
   }
-}), Hf = ".ai-bubble-container{position:fixed;z-index:9999;font-size:12px}.floating-ball{width:70px;height:70px;border-radius:50%;background:linear-gradient(45deg,#ff5722,#ffc107);color:#fff;font-weight:600;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px #0000004d;cursor:grab;user-select:none}.floating-ball:active{cursor:grabbing;transform:scale(.95)}.close-btn{position:absolute;top:-8px;right:-8px;width:24px;height:24px;line-height:24px;background:#0009;color:#fff;border-radius:50%;text-align:center;cursor:pointer;font-size:14px}.chat-panel{position:absolute;bottom:80px;right:0;width:300px;height:400px;background:#fff;border-radius:8px;box-shadow:0 8px 24px #00000026;display:flex;flex-direction:column;overflow:hidden}.messages{flex:1;padding:8px;overflow-y:auto;background:#f5f5f5}.msg-empty{color:#999;text-align:center;margin-top:40px}.msg-line{margin-bottom:6px;line-height:1.4;word-break:break-word}.msg-user{color:#007bff}.msg-ai{color:#000}.input-area{display:flex;align-items:center;padding:6px;border-top:1px solid #ddd}.input-text{flex:1;resize:none;border:1px solid #ccc;border-radius:999px;padding:4px 12px;font-size:12px;line-height:1.2;background:#fafafa;outline:none;max-height:60px;overflow-y:auto}.btn-voice,.btn-send{width:32px;height:32px;margin-left:6px;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}.btn-voice{background:transparent;color:#555}.btn-voice.listening{background:#4caf50;color:#fff;animation:pulse 1.2s infinite}.btn-send{background:#007bff;color:#fff}.btn-send:disabled{background:#aaa;cursor:not-allowed}@keyframes pulse{0%{box-shadow:0 0 #4caf50b3}70%{box-shadow:0 0 0 10px #4caf5000}to{box-shadow:0 0 #4caf5000}}", Uf = (e, t) => {
+}), Hf = ".ai-bubble-container{position:fixed;z-index:9999;font-size:12px}.floating-ball{width:70px;height:70px;border-radius:50%;background:linear-gradient(45deg,#6a11cb,#2575fc);color:#fff;font-weight:600;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px #0000004d;cursor:grab;user-select:none}.floating-ball:active{cursor:grabbing;transform:scale(.95)}.close-btn{position:absolute;top:8px;right:8px;width:24px;height:24px;line-height:24px;background:#0009;color:#fff;border-radius:50%;text-align:center;cursor:pointer;font-size:14px;z-index:10}.chat-panel{position:absolute;top:0;left:80px;width:300px;height:400px;background:#fff;border-radius:8px;box-shadow:0 8px 24px #00000026;display:flex;flex-direction:column;overflow:hidden}.messages{flex:1;padding:8px;overflow-y:auto;background:#f5f5f5}.msg-empty{color:#999;text-align:center;margin-top:40px}.msg-line{margin-bottom:6px;line-height:1.4;word-break:break-word}.msg-user{color:#007bff}.msg-ai{color:#000}.input-area{display:flex;align-items:center;padding:6px;border-top:1px solid #ddd}.input-text{flex:1;resize:none;border:1px solid #ccc;border-radius:999px;padding:4px 12px;font-size:12px;line-height:1.2;background:#fafafa;outline:none;max-height:60px;overflow-y:auto}.btn-voice,.btn-send{width:32px;height:32px;margin-left:6px;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}.btn-voice{background:transparent;color:#555}.btn-voice.listening{background:#4caf50;color:#fff;animation:pulse 1.2s infinite}.btn-send{background:#007bff;color:#fff}.btn-send:disabled{background:#aaa;cursor:not-allowed}@keyframes pulse{0%{box-shadow:0 0 #4caf50b3}70%{box-shadow:0 0 0 10px #4caf5000}to{box-shadow:0 0 #4caf5000}}", Uf = (e, t) => {
   const n = e.__vccOpts || e;
   for (const [r, o] of t)
     n[r] = o;
