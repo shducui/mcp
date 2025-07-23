@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// import { defineNuxtConfig } from 'nuxt'
+// import vueCustomElement from '@vitejs/plugin-vue-custom-element'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
