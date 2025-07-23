@@ -156,7 +156,7 @@ onMounted(()=>{
 })
 </script>
 
-<style scoped>
+<style>
 .ai-bubble-container { position: fixed; z-index:9999; font-size:12px; }
 
 /* 悬浮球 */

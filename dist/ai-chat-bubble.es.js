@@ -7213,10 +7213,5 @@ const Df = {
       ])) : Vn("", !0)
     ], 4));
   }
-}), Mf = (e, t) => {
-  const n = e.__vccOpts || e;
-  for (const [r, o] of t)
-    n[r] = o;
-  return n;
-}, kf = /* @__PURE__ */ Mf(Pf, [["__scopeId", "data-v-14cad703"]]), $f = /* @__PURE__ */ Qc(kf);
-customElements.define("ai-chat-bubble", $f);
+}), Mf = /* @__PURE__ */ Qc(Pf);
+customElements.define("ai-chat-bubble", Mf);
