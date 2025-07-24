@@ -50,6 +50,10 @@ export default defineNuxtConfig({
       compilerOptions: {
           isCustomElement: (tag: string) => tag.includes('-'),
       },
+  },
+
+  nitro: {
+    preset: 'vercel', // 确保这里是 'vercel' 或 'vercel-edge'
   }
 
 
