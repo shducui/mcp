@@ -8,7 +8,7 @@ import path from 'path';
 import { z } from 'zod';// TypeScript 的类型校验库，用于定义工具参数的类型结构。
 // import { experimental_createMCPClient as createMCPClient } from 'ai';
 // import { Experimental_StdioMCPTransport as StdioMCPTransport } from 'ai/mcp-stdio';
-// import fetch from 'node-fetch';
+import fetch from 'node-fetch';
 
 
 //这是一个懒加载事件处理器，表示服务器首次访问 /api/chat 时才会真正加载这个函数。
