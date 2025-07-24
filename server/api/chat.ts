@@ -4,11 +4,11 @@ import { useRuntimeConfig } from '#imports';
 //#imports 是 Nuxt3 特有的自动导入机制，useRuntimeConfig() 读取运行时配置（如 API 密钥等敏感信息）。
 import { streamText, tool, CoreMessage } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';// TypeScript 的类型校验库，用于定义工具参数的类型结构。
-import { experimental_createMCPClient as createMCPClient } from 'ai';
 import path from 'path'; 
-import { Experimental_StdioMCPTransport as StdioMCPTransport } from 'ai/mcp-stdio';
-import fetch from 'node-fetch';
+import { z } from 'zod';// TypeScript 的类型校验库，用于定义工具参数的类型结构。
+// import { experimental_createMCPClient as createMCPClient } from 'ai';
+// import { Experimental_StdioMCPTransport as StdioMCPTransport } from 'ai/mcp-stdio';
+// import fetch from 'node-fetch';
 
 
 //这是一个懒加载事件处理器，表示服务器首次访问 /api/chat 时才会真正加载这个函数。
@@ -31,14 +31,14 @@ export default defineLazyEventHandler(async () => {
     baseURL: 'https://api.deepseek.com/v1',
   });
 //创建一个mcpclient，通过标准输入输出（stdio）kokoro工具服务的 index.js。
-const kokoroClient=await createMCPClient({
-  transport: new StdioMCPTransport({
-    command: 'node',
-    args: ['D:\\affair\\kokoro_mcp\\build\\index.js'],
-  }),
-});
-//获取 kokoro 工具集（例如 text_to_speech）
-const kokoroTool = await kokoroClient.tools();
+// const kokoroClient=await createMCPClient({
+//   transport: new StdioMCPTransport({
+//     command: 'node',
+//     args: ['D:\\affair\\kokoro_mcp\\build\\index.js'],
+//   }),
+// });
+// //获取 kokoro 工具集（例如 text_to_speech）
+// const kokoroTool = await kokoroClient.tools();
 
 
 ///////////////////////////////
@@ -111,7 +111,7 @@ const kokoroTool = await kokoroClient.tools();
             },
           }),
 
-          text_to_speech: kokoroTool.text_to_speech,//把获取到的kokoro工具加到ai的工具集中。
+          // text_to_speech: kokoroTool.text_to_speech,//把获取到的kokoro工具加到ai的工具集中。
         }
       });
 
