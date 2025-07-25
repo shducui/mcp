@@ -111,6 +111,41 @@ export default defineLazyEventHandler(async () => {
             },
           }),
 
+           navigateToPage: tool({
+            description: '当用户想要切换或导航到网站的某个特定页面时使用此工具。',
+            parameters: z.object({
+              // 根据你的 app.js 文件，定义出所有可以跳转的页面
+              pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives'])
+                .describe('目标页面的名称。`portfolio` 是作品集/首页，`blog` 是感官日志。'),
+            }),
+            execute: async ({ pageName }) => {
+              // 后端 execute 的作用是确认工具被正确调用，并可以返回一些信息
+              // 真正的页面跳转发生在前端
+              console.log(`[Tool Executed] navigateToPage: pageName=${pageName}`);
+              // 返回一个简单的对象，告诉前端应该做什么
+              return {
+                page: pageName,
+                message: `好的，即将为您跳转到 ${pageName} 页面。`
+              };
+            },
+          }),
+
+          zoomInOnPhoto: tool({
+            description: '当用户想要放大、查看大图或聚焦某一张照片时使用此工具。',
+            parameters: z.object({
+              // 让AI通过图片标题来识别是哪一张照片
+              photoTitle: z.string().describe('用户想要放大的照片的标题，例如 "老街时光", "咖啡氤氲" 等。'),
+            }),
+            execute: async ({ photoTitle }) => {
+              console.log(`[Tool Executed] zoomInOnPhoto: photoTitle=${photoTitle}`);
+              // 后端确认指令，并把标题返回给前端
+              return {
+                title: photoTitle,
+                message: `好的，正在为您放大《${photoTitle}》。`
+              };
+            },
+          }),
+
           // text_to_speech: kokoroTool.text_to_speech,//把获取到的kokoro工具加到ai的工具集中。
         }
       });

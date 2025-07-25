@@ -21,7 +21,7 @@
       class="close-btn"
       @click="toggleChat"
     >×</div>
-      <div class="messages">
+      <div class="messages" ref="messagesContainerRef">
         <div v-if="messages.length === 0" class="msg-empty">
           有什么可以帮您的吗？
         </div>
@@ -73,7 +73,7 @@
 
 <script setup lang="ts">
 import { useChat } from '@ai-sdk/vue'
-import { ref, watch, reactive, computed, onMounted } from 'vue'
+import { ref, watch, reactive, computed, onMounted, nextTick } from 'vue'
 import { useAudioRecorder } from '../composables/useAudioRecorder'
 
 const props = defineProps<{ apiUrl: string }>()
@@ -88,6 +88,7 @@ const { isRecording, start, stop } = useAudioRecorder((text) => {
 const isChatOpen = ref(false)
 const bubblePos = reactive({ x: 0, y: 0 })
 const containerRef = ref<HTMLElement|null>(null)
+const messagesContainerRef = ref<HTMLElement|null>(null)
 const isDragging = ref(false)
 
 function toggleChat() {
@@ -109,6 +110,48 @@ const isRollingDice = computed(() => {
   const u = [...messages.value].reverse().find(m=>m.role==='user')
   return !!(u && /摇骰子|掷骰子/.test(u.content))
 })
+
+
+watch(messages, async (newMessages, oldMessages) => {
+  // 仅在新消息被添加时触发
+  if (!newMessages || newMessages.length === oldMessages?.length) return;
+
+  const lastMessage = newMessages[newMessages.length - 1];
+  if (!lastMessage) return;
+
+  // 1. 检查是否是工具调用结果的消息
+  if ('toolName' in lastMessage && lastMessage.toolName) {
+    // 根据工具名称执行不同操作
+    switch (lastMessage.toolName) {
+      case 'navigateToPage': {
+        const result = (lastMessage as any).result as { page?: string } | undefined;
+        if (result && result.page) {
+          console.log(`[AI Bubble] 检测到导航指令, 目标: ${result.page}`);
+          // 派发“导航”事件给主页面
+          window.dispatchEvent(new CustomEvent('ai-navigate', { detail: { page: result.page } }));
+        }
+        break;
+      }
+      case 'zoomInOnPhoto': {
+        const result = (lastMessage as any).result as { title?: string } | undefined;
+        if (result && result.title) {
+          console.log(`[AI Bubble] 检测到放大图片指令, 目标: ${result.title}`);
+          // 派发“放大图片”事件给主页面
+          window.dispatchEvent(new CustomEvent('ai-zoom-photo', { detail: { title: result.title } }));
+        }
+        break;
+      }
+    }
+  }
+
+  // 2. 自动滚动消息列表到底部
+  await nextTick(); // 等待DOM更新
+  if (messagesContainerRef.value) {
+    messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
+  }
+}, { deep: true });
+
+
 
 function startDrag(e: MouseEvent) {
   e.preventDefault()
