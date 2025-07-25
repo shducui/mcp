@@ -112,43 +112,115 @@ const isRollingDice = computed(() => {
 })
 
 
+// watch(messages, async (newMessages, oldMessages) => {
+//   // 仅在新消息被添加时触发
+//   if (!newMessages || newMessages.length === oldMessages?.length) return;
+
+//   const lastMessage = newMessages[newMessages.length - 1];
+//   if (!lastMessage) return;
+
+//   // 1. 检查是否是工具调用结果的消息
+//   if ('toolName' in lastMessage && lastMessage.toolName) {
+//     // 根据工具名称执行不同操作
+//     switch (lastMessage.toolName) {
+//       case 'navigateToPage': {
+//         const result = (lastMessage as any).result as { page?: string } | undefined;
+//         if (result && result.page) {
+//           console.log(`[AI Bubble] 检测到导航指令, 目标: ${result.page}`);
+//           // 派发“导航”事件给主页面
+//           window.dispatchEvent(new CustomEvent('ai-navigate', 
+//           { detail: { page: result.page }, 
+//           bubbles: true,
+//            composed: true }));
+//         }
+//         break;
+//       }
+//       case 'zoomInOnPhoto': {
+//         const result = (lastMessage as any).result as { title?: string } | undefined;
+//         if (result && result.title) {
+//           console.log(`[AI Bubble] 检测到放大图片指令, 目标: ${result.title}`);
+//           // 派发“放大图片”事件给主页面
+//           window.dispatchEvent(new CustomEvent('ai-zoom-photo', 
+//           { detail: { title: result.title },
+//            bubbles: true,
+//            composed: true }));
+//         }
+//         break;
+//       }
+//     }
+//   }
+
+
 watch(messages, async (newMessages, oldMessages) => {
-  // 仅在新消息被添加时触发
-  if (!newMessages || newMessages.length === oldMessages?.length) return;
+  // 1. 只有在消息数量变化时才处理
+  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) {
+    return;
+  }
 
   const lastMessage = newMessages[newMessages.length - 1];
-  if (!lastMessage) return;
+  let handled = false;
 
-  // 1. 检查是否是工具调用结果的消息
+  // —— 一、先按 toolName 逻辑尝试 —— //
   if ('toolName' in lastMessage && lastMessage.toolName) {
-    // 根据工具名称执行不同操作
     switch (lastMessage.toolName) {
       case 'navigateToPage': {
         const result = (lastMessage as any).result as { page?: string } | undefined;
-        if (result && result.page) {
+        if (result?.page) {
           console.log(`[AI Bubble] 检测到导航指令, 目标: ${result.page}`);
-          // 派发“导航”事件给主页面
-          window.dispatchEvent(new CustomEvent('ai-navigate', 
-          { detail: { page: result.page }, 
-          bubbles: true,
-           composed: true }));
+          window.dispatchEvent(new CustomEvent('ai-navigate', {
+            detail: { page: result.page },
+            bubbles: true,
+            composed: true
+          }));
+          handled = true;
         }
         break;
       }
       case 'zoomInOnPhoto': {
         const result = (lastMessage as any).result as { title?: string } | undefined;
-        if (result && result.title) {
+        if (result?.title) {
           console.log(`[AI Bubble] 检测到放大图片指令, 目标: ${result.title}`);
-          // 派发“放大图片”事件给主页面
-          window.dispatchEvent(new CustomEvent('ai-zoom-photo', 
-          { detail: { title: result.title },
-           bubbles: true,
-           composed: true }));
+          window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+            detail: { title: result.title },
+            bubbles: true,
+            composed: true
+          }));
+          handled = true;
         }
         break;
       }
     }
   }
+
+  // —— 二、降级方案：正则匹配 AI 普通文本 —— //
+  if (!handled && typeof lastMessage.content === 'string') {
+    const text = lastMessage.content;
+    // 匹配 “即将为您跳转到 contact 页面” 或 “即将为您跳转到 about 页面”
+    const navMatch = text.match(/即将为您跳转到\s*([a-zA-Z0-9_-]+)\s*页面/);
+    if (navMatch?.[1]) {
+      const page = navMatch[1];
+      console.log('[AI Bubble] 正则匹配到导航目标：', page);
+      window.dispatchEvent(new CustomEvent('ai-navigate', {
+        detail: { page },
+        bubbles: true,
+        composed: true
+      }));
+      handled = true;
+    }
+
+    // （如果还想对图片放大也降级匹配，可在这里加类似的正则）
+    const zoomMatch = text.match(/检测到放大.*?“(.+?)”/);
+if (!handled && zoomMatch?.[1]) {
+  const title = zoomMatch[1];
+  console.log('[AI Bubble] 正则匹配到放大目标：', title);
+  window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+    detail: { title },
+    bubbles: true,
+    composed: true
+  }));
+}
+  }
+
 
   // 2. 自动滚动消息列表到底部
   await nextTick(); // 等待DOM更新
