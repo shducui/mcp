@@ -128,7 +128,10 @@ watch(messages, async (newMessages, oldMessages) => {
         if (result && result.page) {
           console.log(`[AI Bubble] 检测到导航指令, 目标: ${result.page}`);
           // 派发“导航”事件给主页面
-          window.dispatchEvent(new CustomEvent('ai-navigate', { detail: { page: result.page } }));
+          window.dispatchEvent(new CustomEvent('ai-navigate', 
+          { detail: { page: result.page }, 
+          bubbles: true,
+           composed: true }));
         }
         break;
       }
@@ -137,7 +140,10 @@ watch(messages, async (newMessages, oldMessages) => {
         if (result && result.title) {
           console.log(`[AI Bubble] 检测到放大图片指令, 目标: ${result.title}`);
           // 派发“放大图片”事件给主页面
-          window.dispatchEvent(new CustomEvent('ai-zoom-photo', { detail: { title: result.title } }));
+          window.dispatchEvent(new CustomEvent('ai-zoom-photo', 
+          { detail: { title: result.title },
+           bubbles: true,
+           composed: true }));
         }
         break;
       }
