@@ -152,28 +152,28 @@ const isRollingDice = computed(() => {
 
 
 watch(messages, async (newMessages, oldMessages) => {
-  // 1. 只有在消息数量变化时才处理
+  console.log('--- [AI Bubble] messages 数组发生变化 ---'); // 保留这行用于调试
   if (!newMessages || newMessages.length === (oldMessages?.length || 0)) {
     return;
   }
 
   const lastMessage = newMessages[newMessages.length - 1];
-  let handled = false; // 标记是否已处理过导航或放大指令
+  if (!lastMessage) return;
 
-  // --- 一、先按 toolName 逻辑尝试 --- //
+  // 只处理包含 toolName 字段的消息，这是最稳定可靠的方式
   if ('toolName' in lastMessage && lastMessage.toolName) {
     switch (lastMessage.toolName) {
       case 'navigateToPage': {
-        const result = (lastMessage as any).result as { page?: string } | undefined;
+        const result = (lastMessage as any).result as { page?: string };
         if (result?.page) {
-          console.log(`[AI Bubble] 检测到导航指令, 目标: ${result.page}`);
-          // **直接在 Web Component 内部执行页面跳转**
+          console.log(`[AI Bubble] 工具调用：检测到导航指令, 目标: ${result.page}`);
+          
           let targetPath = '/';
           switch (result.page) {
             case 'portfolio':
             case 'blog':
             case 'archives':
-              targetPath = '/'; // 首页或通用页面
+              targetPath = '/';
               break;
             case 'about':
               targetPath = '/about';
@@ -182,88 +182,38 @@ watch(messages, async (newMessages, oldMessages) => {
               targetPath = '/contact';
               break;
             default:
-              console.error(`[AI Bubble] 未知的导航目标: ${result.page}`);
-              // 可以选择给用户一个反馈，例如通过AI回复
-              // messages.value.push({ id: Date.now().toString(), role: 'ai', content: `抱歉，无法跳转到 "${result.page}" 页面。` });
-              return; // 未知目标则不执行跳转
+              console.error(`[AI Bubble] 未知导航目标: ${result.page}`);
+              return; 
           }
-          console.log(`[AI Bubble] 执行页面跳转到: ${targetPath}`);
+          
+          console.log(`[AI Bubble] 正在执行页面跳转到: ${targetPath}`);
+          // 直接在组件内部执行跳转，不再需要主页面监听
           window.location.href = targetPath;
-          handled = true; // 标记为已处理
         }
         break;
       }
       case 'zoomInOnPhoto': {
-        const result = (lastMessage as any).result as { title?: string } | undefined;
+        const result = (lastMessage as any).result as { title?: string };
         if (result?.title) {
-          console.log(`[AI Bubble] 检测到放大图片指令, 目标: ${result.title}`);
-          // 派发事件，因为放大图片通常需要主页面应用的状态管理或特定DOM操作
+          console.log(`[AI Bubble] 工具调用：检测到放大图片指令, 目标: ${result.title}`);
+          // 放大图片仍建议使用事件派发，因为它需要操作主页面的DOM
           window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
             detail: { title: result.title },
             bubbles: true,
             composed: true
           }));
-          handled = true; // 标记为已处理
         }
         break;
       }
     }
   }
 
-  // --- 二、降级方案：正则匹配 AI 普通文本 --- //
-  // 只有当工具调用逻辑未处理时，才尝试正则匹配普通文本
-  if (!handled && typeof lastMessage.content === 'string') {
-    const text = lastMessage.content;
-    // 匹配 “即将为您跳转到 contact 页面” 或 “即将为您跳转到 about 页面”
-    const navMatch = text.match(/即将为您跳转到\s*([a-zA-Z0-9_-]+)\s*页面/);
-    if (navMatch?.[1]) {
-      const page = navMatch[1];
-      console.log('[AI Bubble] 正则匹配到导航目标：', page);
-      // **直接在 Web Component 内部执行页面跳转**
-      let targetPath = '/';
-      switch (page) { // 使用正则匹配到的 page
-        case 'portfolio':
-        case 'blog':
-        case 'archives':
-          targetPath = '/';
-          break;
-        case 'about':
-          targetPath = '/about';
-          break;
-        case 'contact':
-          targetPath = '/contact';
-          break;
-        default:
-          console.error(`[AI Bubble] 未知的导航目标 (正则匹配): ${page}`);
-          return; // 未知目标则不执行跳转
-      }
-      console.log(`[AI Bubble] 执行页面跳转到 (正则匹配): ${targetPath}`);
-      window.location.href = targetPath;
-      handled = true; // 标记为已处理
-    }
-
-    // （如果还想对图片放大也降级匹配，可在这里加类似的正则）
-    const zoomMatch = text.match(/检测到放大.*?“(.+?)”/);
-    if (!handled && zoomMatch?.[1]) { // 确保只有在导航未处理时才处理放大
-      const title = zoomMatch[1];
-      console.log('[AI Bubble] 正则匹配到放大目标：', title);
-      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
-        detail: { title },
-        bubbles: true,
-        composed: true
-      }));
-      // handled = true; // 图片放大不设为true，除非你想阻止后面的消息滚动
-    }
-  }
-
-
-  // 2. 自动滚动消息列表到底部
-  await nextTick(); // 等待DOM更新
+  // 自动滚动消息列表到底部
+  await nextTick();
   if (messagesContainerRef.value) {
     messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
   }
 }, { deep: true });
-
 
 
 
