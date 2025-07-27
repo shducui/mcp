@@ -7132,7 +7132,7 @@ const Af = {
         return;
       const b = A[A.length - 1];
       if (b) {
-        if ("toolName" in b && b.toolName)
+        if (console.log("最新消息对象结构:", JSON.stringify(b, null, 2)), "toolName" in b && b.toolName)
           switch (b.toolName) {
             case "navigateToPage": {
               const V = b.result;

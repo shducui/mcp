@@ -160,6 +160,9 @@ watch(messages, async (newMessages, oldMessages) => {
   const lastMessage = newMessages[newMessages.length - 1];
   if (!lastMessage) return;
 
+
+
+  console.log('最新消息对象结构:', JSON.stringify(lastMessage, null, 2));
   // 只处理包含 toolName 字段的消息，这是最稳定可靠的方式
   if ('toolName' in lastMessage && lastMessage.toolName) {
     switch (lastMessage.toolName) {
