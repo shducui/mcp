@@ -46,13 +46,13 @@
           <span v-else>思考中...</span>
         </div>
       </div>
-      <form @submit.prevent="handleSubmit" class="input-area">
+      <form @submit.prevent="onFormSubmit" class="input-area">
         <textarea
           v-model="input"
           class="input-text"
           rows="1"
           placeholder="请输入..."
-          @keydown.enter.exact.prevent="handleSubmit"
+          @keydown.enter.exact.prevent="onFormSubmit"
         ></textarea>
         <button
           type="button"
@@ -75,148 +75,67 @@
 import { useChat } from '@ai-sdk/vue'
 import { ref, watch, reactive, computed, onMounted, nextTick } from 'vue'
 import { useAudioRecorder } from '../composables/useAudioRecorder'
+import { useAssistant } from '@ai-sdk/vue'
 
 const props = defineProps<{ apiUrl: string }>()
-const { messages, input, handleSubmit, isLoading } = useChat({ api: props.apiUrl })
+const { status, messages, input, handleSubmit, error } = useAssistant({
+  // 将 API 地址指向新的 assistant API
+  api: props.apiUrl.replace('/chat', '/assistant')
+})
+
+// 3. 用 status 计算 isLoading 状态，以兼容你模板中的部分逻辑
+const isLoading = computed(() => status.value === 'in_progress')
+
+// 4. 更新 ASR 回调以使用 submitMessage
 const { isRecording, start, stop } = useAudioRecorder((text) => {
   const t = text.trim()
-  if (['发送','提交','发出'].includes(t)) return void handleSubmit()
-  if (['清空','清除','删除'].includes(t)) return void (input.value = '')
+  if (['发送','提交','发出'].includes(t)) {
+    // 调用 useAssistant 的提交函数
+    handleSubmit(new Event('submit') as any); 
+    return;
+  }
+  if (['清空','清除','删除'].includes(t)) { input.value = ''; return; }
   input.value = t
 })
 
+// --- 其他 UI 逻辑 ---
 const isChatOpen = ref(false)
 const bubblePos = reactive({ x: 0, y: 0 })
 const containerRef = ref<HTMLElement|null>(null)
 const messagesContainerRef = ref<HTMLElement|null>(null)
 const isDragging = ref(false)
 
-function toggleChat() {
-  isChatOpen.value = !isChatOpen.value
-}
-
-function handleBubbleClick() {
-  if (!isDragging.value) toggleChat()
-}
-
+function toggleChat() { isChatOpen.value = !isChatOpen.value }
+function handleBubbleClick() { if (!isDragging.value) toggleChat() }
 function isAudioUrl(c: string) { return c.trim().startsWith('<audio') }
-function extractAudioSrc(h: string) {
-  const m = h.match(/src="([^"]+)"/)
-  return m ? m[1] : null
-}
+function extractAudioSrc(h: string) { const m = h.match(/src="([^"]+)"/); return m ? m[1] : null }
 
 const isRollingDice = computed(() => {
-  if (!isLoading.value) return false
+  if (status.value !== 'in_progress') return false
   const u = [...messages.value].reverse().find(m=>m.role==='user')
   return !!(u && /摇骰子|掷骰子/.test(u.content))
 })
 
-
-// watch(messages, async (newMessages, oldMessages) => {
-//   // 仅在新消息被添加时触发
-//   if (!newMessages || newMessages.length === oldMessages?.length) return;
-
-//   const lastMessage = newMessages[newMessages.length - 1];
-//   if (!lastMessage) return;
-
-//   // 1. 检查是否是工具调用结果的消息
-//   if ('toolName' in lastMessage && lastMessage.toolName) {
-//     // 根据工具名称执行不同操作
-//     switch (lastMessage.toolName) {
-//       case 'navigateToPage': {
-//         const result = (lastMessage as any).result as { page?: string } | undefined;
-//         if (result && result.page) {
-//           console.log(`[AI Bubble] 检测到导航指令, 目标: ${result.page}`);
-//           // 派发“导航”事件给主页面
-//           window.dispatchEvent(new CustomEvent('ai-navigate', 
-//           { detail: { page: result.page }, 
-//           bubbles: true,
-//            composed: true }));
-//         }
-//         break;
-//       }
-//       case 'zoomInOnPhoto': {
-//         const result = (lastMessage as any).result as { title?: string } | undefined;
-//         if (result && result.title) {
-//           console.log(`[AI Bubble] 检测到放大图片指令, 目标: ${result.title}`);
-//           // 派发“放大图片”事件给主页面
-//           window.dispatchEvent(new CustomEvent('ai-zoom-photo', 
-//           { detail: { title: result.title },
-//            bubbles: true,
-//            composed: true }));
-//         }
-//         break;
-//       }
-//     }
-//   }
-
-
-watch(messages, async (newMessages, oldMessages) => {
-  console.log('--- [AI Bubble] messages 数组发生变化 ---'); // 保留这行用于调试
-  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) {
-    return;
-  }
-
-  const lastMessage = newMessages[newMessages.length - 1];
-  if (!lastMessage) return;
-
-
-
-  console.log('最新消息对象结构:', JSON.stringify(lastMessage, null, 2));
-  // 只处理包含 toolName 字段的消息，这是最稳定可靠的方式
-  if ('toolName' in lastMessage && lastMessage.toolName) {
-    switch (lastMessage.toolName) {
-      case 'navigateToPage': {
-        const result = (lastMessage as any).result as { page?: string };
-        if (result?.page) {
-          console.log(`[AI Bubble] 工具调用：检测到导航指令, 目标: ${result.page}`);
-          
-          let targetPath = '/';
-          switch (result.page) {
-            case 'portfolio':
-            case 'blog':
-            case 'archives':
-              targetPath = '/';
-              break;
-            case 'about':
-              targetPath = '/about';
-              break;
-            case 'contact':
-              targetPath = '/contact';
-              break;
-            default:
-              console.error(`[AI Bubble] 未知导航目标: ${result.page}`);
-              return; 
-          }
-          
-          console.log(`[AI Bubble] 正在执行页面跳转到: ${targetPath}`);
-          // 直接在组件内部执行跳转，不再需要主页面监听
-          window.location.href = targetPath;
-        }
-        break;
-      }
-      case 'zoomInOnPhoto': {
-        const result = (lastMessage as any).result as { title?: string };
-        if (result?.title) {
-          console.log(`[AI Bubble] 工具调用：检测到放大图片指令, 目标: ${result.title}`);
-          // 放大图片仍建议使用事件派发，因为它需要操作主页面的DOM
-          window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
-            detail: { title: result.title },
-            bubbles: true,
-            composed: true
-          }));
-        }
-        break;
-      }
-    }
-  }
-
-  // 自动滚动消息列表到底部
+// 5. 移除旧的、复杂的手动 watch 逻辑，只保留滚动和错误监控功能
+watch(messages, async () => {
   await nextTick();
   if (messagesContainerRef.value) {
     messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
   }
 }, { deep: true });
+
+// 表单提交处理函数
+function onFormSubmit() {
+  if (!input.value.trim() || isLoading.value) return;
+  handleSubmit(new Event('submit') as any);
+}
+
+// 监控错误状态
+watch(error, (newError) => {
+  if (newError) {
+    console.error('[Assistant] An error occurred:', newError);
+  }
+});
 
 
 
@@ -253,6 +172,9 @@ onMounted(()=>{
   bubblePos.x = window.innerWidth - el.offsetWidth - m
   bubblePos.y = window.innerHeight - el.offsetHeight - m
 })
+
+
+// submitMessage is provided by useAssistant, so no need to redefine it here.
 </script>
 
 <style>
