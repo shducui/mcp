@@ -15,7 +15,7 @@ const apiKey = useRuntimeConfig().OPENAI_API_KEY;
 
 const openai = createOpenAI({
   apiKey: apiKey, 
-  baseURL: 'https://api.gpt.ge',
+  baseURL: 'https://api.v3.cm/v1',
 });
 
 export default defineEventHandler(async (event: H3Event) => {
