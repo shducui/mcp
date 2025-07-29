@@ -4,41 +4,21 @@
     class="ai-bubble-container"
     :style="{ left: bubblePos.x + 'px', top: bubblePos.y + 'px' }"
   >
-    <!-- 悬浮球 -->
-    <div
-      class="floating-ball"
-      @mousedown="startDrag"
-      @click="handleBubbleClick"
-    >AI</div>
+    <div class="floating-ball" @mousedown="startDrag" @click="handleBubbleClick">AI</div>
 
-    <!-- 聊天面板关闭按钮 -->
-   
-
-    <!-- 聊天面板 -->
-    <div v-if="isChatOpen" class="chat-panel" >
-       <div
-      v-if="isChatOpen"
-      class="close-btn"
-      @click="toggleChat"
-    >×</div>
+    <div v-if="isChatOpen" class="chat-panel">
+      <div v-if="isChatOpen" class="close-btn" @click="toggleChat">×</div>
       <div class="messages" ref="messagesContainerRef">
-        <div v-if="messages.length === 0" class="msg-empty">
-          有什么可以帮您的吗？
-        </div>
+        <div v-if="messages.length === 0" class="msg-empty">有什么可以帮您的吗？</div>
         <div
           v-for="m in messages"
           :key="m.id"
           class="msg-line"
           :class="m.role === 'user' ? 'msg-user' : 'msg-ai'"
         >
-          <template v-if="isAudioUrl(m.content)">
-            <audio
-              :src="extractAudioSrc(m.content)!"
-              controls autoplay
-            ></audio>
-          </template>
-          <template v-else>
-            {{ m.content }}
+          <template v-if="m.role === 'user' || m.role === 'assistant'">
+            <div v-if="isAudioUrl(m.content)" v-html="m.content"></div>
+            <div v-else>{{ m.content }}</div>
           </template>
         </div>
         <div v-if="isLoading" class="msg-line msg-ai">
@@ -46,26 +26,10 @@
           <span v-else>思考中...</span>
         </div>
       </div>
-      <form @submit.prevent="onFormSubmit" class="input-area">
-        <textarea
-          v-model="input"
-          class="input-text"
-          rows="1"
-          placeholder="请输入..."
-          @keydown.enter.exact.prevent="onFormSubmit"
-        ></textarea>
-        <button
-          type="button"
-          class="btn-voice"
-          :class="{ listening: isRecording }"
-          @click="isRecording ? stop() : start()"
-          title="语音输入"
-        >🎤</button>
-        <button
-          type="submit"
-          class="btn-send"
-          :disabled="isLoading || !input.trim()"
-        >➤</button>
+      <form @submit.prevent="handleSubmit" class="input-area">
+        <textarea v-model="input" class="input-text" rows="1" placeholder="请输入..." @keydown.enter.exact.prevent="handleSubmit"></textarea>
+        <button type="button" class="btn-voice" :class="{ listening: isRecording }" @click="isRecording ? stop() : start()" title="语音输入">🎤</button>
+        <button type="submit" class="btn-send" :disabled="isLoading || !input.trim()">➤</button>
       </form>
     </div>
   </div>
@@ -75,49 +39,96 @@
 import { useChat } from '@ai-sdk/vue'
 import { ref, watch, reactive, computed, onMounted, nextTick } from 'vue'
 import { useAudioRecorder } from '../composables/useAudioRecorder'
-import { useAssistant } from '@ai-sdk/vue'
 
 const props = defineProps<{ apiUrl: string }>()
-const { status, messages, input, handleSubmit, error } = useAssistant({
-  // 将 API 地址指向新的 assistant API
-  api: props.apiUrl.replace('/chat', '/assistant')
-})
 
-// 3. 用 status 计算 isLoading 状态，以兼容你模板中的部分逻辑
-const isLoading = computed(() => status.value === 'in_progress')
+// 1. 回归 useChat
+// 补充 UIMessage 类型定义，添加 toolName 可选属性
+type UIMessage = {
+  id: string
+  role: 'system' | 'user' | 'assistant' | 'data' | 'tool'
+  content: string
+  result?: any
+  toolName?: string
+}
 
-// 4. 更新 ASR 回调以使用 submitMessage
+const chatResult = useChat({
+  // 确保 API 地址指向我们新的 /api/chat
+  api: props.apiUrl.includes('/chat') ? props.apiUrl : props.apiUrl.replace('/assistant', '/chat'),
+});
+
+const messages = chatResult.messages as import('vue').Ref<UIMessage[]>;
+const input = chatResult.input as import('vue').Ref<string>;
+const handleSubmit = chatResult.handleSubmit as (e?: Event) => void;
+const isLoading = chatResult.isLoading as import('vue').Ref<boolean>;
+const error = chatResult.error as import('vue').Ref<any>;
+
+// ... ASR 和其他 UI 逻辑保持不变 ...
 const { isRecording, start, stop } = useAudioRecorder((text) => {
   const t = text.trim()
-  if (['发送','提交','发出'].includes(t)) {
-    // 调用 useAssistant 的提交函数
-    handleSubmit(new Event('submit') as any); 
-    return;
-  }
-  if (['清空','清除','删除'].includes(t)) { input.value = ''; return; }
+  if (['发送','提交','发出'].includes(t)) return void handleSubmit()
+  if (['清空','清除','删除'].includes(t)) return void (input.value = '')
   input.value = t
 })
-
-// --- 其他 UI 逻辑 ---
 const isChatOpen = ref(false)
 const bubblePos = reactive({ x: 0, y: 0 })
 const containerRef = ref<HTMLElement|null>(null)
 const messagesContainerRef = ref<HTMLElement|null>(null)
 const isDragging = ref(false)
-
 function toggleChat() { isChatOpen.value = !isChatOpen.value }
 function handleBubbleClick() { if (!isDragging.value) toggleChat() }
 function isAudioUrl(c: string) { return c.trim().startsWith('<audio') }
 function extractAudioSrc(h: string) { const m = h.match(/src="([^"]+)"/); return m ? m[1] : null }
-
 const isRollingDice = computed(() => {
-  if (status.value !== 'in_progress') return false
+  if (!isLoading.value) return false
   const u = [...messages.value].reverse().find(m=>m.role==='user')
   return !!(u && /摇骰子|掷骰子/.test(u.content))
 })
 
-// 5. 移除旧的、复杂的手动 watch 逻辑，只保留滚动和错误监控功能
-watch(messages, async () => {
+// 2. 回归我们最可靠的 watch 方案
+watch(messages, async (newMessages, oldMessages) => {
+  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
+
+  const lastMessage = newMessages[newMessages.length - 1];
+  if (!lastMessage) return;
+
+  // 这是调试的关键，再次确认消息结构
+  console.log('最新消息对象结构:', JSON.stringify(lastMessage, null, 2));
+
+  // 我们期望这次能在这里捕获到 role: 'tool' 的消息
+  if (lastMessage.role === 'tool' && lastMessage.toolName) {
+    switch (lastMessage.toolName) {
+      case 'navigateToPage': {
+        const result = (lastMessage as any).result as { page?: string };
+        if (result?.page) {
+          console.log(`[Watcher] 检测到导航指令, 目标: ${result.page}`);
+          let targetPath = '/';
+          switch (result.page) {
+            case 'portfolio': case 'blog': case 'archives': targetPath = '/'; break;
+            case 'about': targetPath = '/about'; break;
+            case 'contact': targetPath = '/contact'; break;
+            default: console.error(`[Watcher] 未知导航目标: ${result.page}`); return;
+          }
+          console.log(`[Watcher] 执行页面跳转到: ${targetPath}`);
+          window.location.href = targetPath;
+        }
+        break;
+      }
+      case 'zoomInOnPhoto': {
+        const result = (lastMessage as any).result as { title?: string };
+        if (result?.title) {
+          console.log(`[Watcher] 检测到放大图片指令, 目标: ${result.title}`);
+          window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+            detail: { title: result.title },
+            bubbles: true,
+            composed: true
+          }));
+        }
+        break;
+      }
+    }
+  }
+
   await nextTick();
   if (messagesContainerRef.value) {
     messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;

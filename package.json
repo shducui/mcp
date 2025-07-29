@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.23",
+    "@ai-sdk/rsc": "1.0.0-canary.22",
     "@ai-sdk/vue": "^1.2.12",
     "@nuxt/content": "3.6.3",
     "@nuxt/eslint": "1.5.2",
@@ -32,8 +33,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.0",
-    "vite": "^5.2.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.0.6",
     "vue": "^3.5.18"
   },
   "version": "3.0.1"
