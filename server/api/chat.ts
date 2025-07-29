@@ -5,11 +5,17 @@ import { streamText, tool } from 'ai'; // 从 'ai' 核心包导入
 import { z } from 'zod';
 
 // 从 runtimeConfig 读取 apiKey，这是 Nuxt 的最佳实践
-const apiKey = useRuntimeConfig().deepseekApiKey;
+// const apiKey = useRuntimeConfig().deepseekApiKey;
+const apiKey = useRuntimeConfig().OPENAI_API_KEY;
+
+// const openai = createOpenAI({
+//   apiKey: apiKey, 
+//   baseURL: 'https://api.deepseek.com/v1',
+// });
 
 const openai = createOpenAI({
   apiKey: apiKey, 
-  baseURL: 'https://api.deepseek.com/v1',
+  baseURL: 'https://api.gpt.ge',
 });
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -22,25 +28,24 @@ export default defineEventHandler(async (event: H3Event) => {
   }
   
   const { messages } = await readBody(event);
-
+console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
   // 使用最核心的 streamText 函数
   const result = await streamText({
-    model: openai('deepseek-chat'),
+    // model: openai('deepseek-chat'),
+    model: openai('gpt-4.1'),
     messages,
-    system:`你是一个功能强大的网站智能助手。你的主要任务是理解用户意图并调用合适的工具来执行操作，而不是进行闲聊。
-可用页面列表如下：
-- 'portfolio': 作品集或主页
-- 'about': 关于我页面
-- 'contact': 联系方式页面
-- 'blog': 感官日志页面
-- 'archives': 历史存档页面
+    system:`
+你是网站智能助手。
 
-【指令规则】
-1. 当用户的意图是切换、跳转、打开、导航或查看任何一个可用页面时，你 **必须** 使用 'navigateToPage' 工具。例如，当用户说“看看你的作品”、“关于你”、“怎么联系你”或“跳转到博客”，都必须调用此工具。
-2. 当用户的意图是放大、查看大图或聚焦某张照片时，你 **必须** 使用 'zoomInOnPhoto' 工具。
-3. 对于计算或摇骰子等其他任务，使用对应的工具。
-4. **不要** 自己编造页面名称或图片标题。严格使用工具参数中定义的枚举值或用户提供的标题。
-5. 完成工具调用后，用简洁的语言确认操作已执行即可。`,
+**当用户要求跳转页面时，一定** 调用 navigateToPage 工具，参数 pageName 必须是：
+  portfolio, about, contact, blog, archives
+
+不要直接回答“好的”，也不要写普通文字，直接调用工具即可：
+ 
+{"toolName":"navigateToPage","args":{"pageName":"about"}}
+
+同样，放大图片时调用 zoomInOnPhoto。
+`,
     // 工具定义保持不变
     tools: {
       navigateToPage: {
@@ -94,7 +99,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
     },
   });
-
+console.log('[API/chat] 已调用 streamText，准备返回流');
   // 使用 toDataStreamResponse 将完整的、包含所有消息部分的流返回给前端
   return result.toDataStreamResponse();
 });
