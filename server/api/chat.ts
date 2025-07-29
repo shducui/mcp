@@ -27,21 +27,31 @@ export default defineEventHandler(async (event: H3Event) => {
   const result = await streamText({
     model: openai('deepseek-chat'),
     messages,
-    system: `你是一个部署在网站上的智能助手。
-             你的任务是与用户聊天并根据指令调用工具来控制网页。
-             当用户想要切换页面时，必须使用 navigateToPage 工具。
-             当用户想要放大照片时，必须使用 zoomInOnPhoto 工具。`,
+    system:`你是一个功能强大的网站智能助手。你的主要任务是理解用户意图并调用合适的工具来执行操作，而不是进行闲聊。
+可用页面列表如下：
+- 'portfolio': 作品集或主页
+- 'about': 关于我页面
+- 'contact': 联系方式页面
+- 'blog': 感官日志页面
+- 'archives': 历史存档页面
+
+【指令规则】
+1. 当用户的意图是切换、跳转、打开、导航或查看任何一个可用页面时，你 **必须** 使用 'navigateToPage' 工具。例如，当用户说“看看你的作品”、“关于你”、“怎么联系你”或“跳转到博客”，都必须调用此工具。
+2. 当用户的意图是放大、查看大图或聚焦某张照片时，你 **必须** 使用 'zoomInOnPhoto' 工具。
+3. 对于计算或摇骰子等其他任务，使用对应的工具。
+4. **不要** 自己编造页面名称或图片标题。严格使用工具参数中定义的枚举值或用户提供的标题。
+5. 完成工具调用后，用简洁的语言确认操作已执行即可。`,
     // 工具定义保持不变
     tools: {
       navigateToPage: {
-        description: '当用户想要切换或导航到网站的某个特定页面时使用此工具。',
+        description:  '用于将用户导航或跳转到网站的特定页面。接收一个页面名称作为参数。',
         parameters: z.object({
           pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
         }),
         execute: async ({ pageName }) => ({ page: pageName }),
       },
       zoomInOnPhoto: {
-        description: '当用户想要放大、查看或聚焦某一张照片时使用此工具。',
+        description: '用于放大显示用户指定的某一张照片。接收照片的标题作为参数。',
         parameters: z.object({
           photoTitle: z.string().describe('照片的标题'),
         }),
