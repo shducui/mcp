@@ -15,7 +15,7 @@ const apiKey = useRuntimeConfig().OPENAI_API_KEY;
 
 const openai = createOpenAI({
   apiKey: apiKey, 
-  baseURL: 'https://api-gpt‑ge.apifox.cn/v1',
+  baseURL: 'https://api-gpt-ge.apifox.cn/v1',
 });
 
 export default defineEventHandler(async (event: H3Event) => {
