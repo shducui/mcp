@@ -30,11 +30,34 @@ export default defineEventHandler(async (event: H3Event) => {
   const { messages } = await readBody(event);
   console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
   
-  // 使用最核心的 streamText 函数
-  const result = await streamText({
-    model: openai('gpt-4'),
-    messages,
-    system:`
+  // 清理消息历史，确保没有未完成的工具调用
+  const cleanedMessages = messages.map((msg: any) => {
+    if (msg.role === 'assistant' && msg.toolInvocations) {
+      // 只保留已完成的工具调用
+      const completedInvocations = msg.toolInvocations.filter((inv: any) => inv.state === 'result');
+      
+      if (completedInvocations.length === 0) {
+        // 如果没有已完成的工具调用，移除toolInvocations属性
+        const { toolInvocations, ...cleanMsg } = msg;
+        return cleanMsg;
+      } else {
+        return {
+          ...msg,
+          toolInvocations: completedInvocations
+        };
+      }
+    }
+    return msg;
+  });
+
+  console.log('[API/chat] 清理后的消息：', JSON.stringify(cleanedMessages, null, 2));
+  
+  try {
+    // 使用最核心的 streamText 函数
+    const result = await streamText({
+      model: openai('gpt-4'),
+      messages: cleanedMessages,
+      system:`
 你是网站智能助手。
 
 **当用户要求跳转页面时，必须调用 navigateToPage 工具**，参数 pageName 必须是：
@@ -46,66 +69,73 @@ export default defineEventHandler(async (event: H3Event) => {
 
 跳转成功后，不要说"页面已跳转"之类的话，而是要根据当前页面内容来回应用户。
 `,
-    tools: {
-      navigateToPage: tool({
-        description: '用于将用户导航或跳转到网站的特定页面',
-        parameters: z.object({
-          pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
+      tools: {
+        navigateToPage: tool({
+          description: '用于将用户导航或跳转到网站的特定页面',
+          parameters: z.object({
+            pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
+          }),
+          execute: async ({ pageName }) => {
+            console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
+            return { page: pageName, success: true };
+          },
         }),
-        execute: async ({ pageName }) => {
-          console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
-          return { page: pageName, success: true };
-        },
-      }),
-      zoomInOnPhoto: tool({
-        description: '用于放大显示用户指定的某一张照片',
-        parameters: z.object({
-          photoTitle: z.string().describe('照片的标题'),
+        zoomInOnPhoto: tool({
+          description: '用于放大显示用户指定的某一张照片',
+          parameters: z.object({
+            photoTitle: z.string().describe('照片的标题'),
+          }),
+          execute: async ({ photoTitle }) => {
+            console.log(`[ToolExecuted][zoomInOnPhoto] photoTitle = ${photoTitle}`);
+            return { title: photoTitle };
+          },
         }),
-        execute: async ({ photoTitle }) => {
-          console.log(`[ToolExecuted][zoomInOnPhoto] photoTitle = ${photoTitle}`);
-          return { title: photoTitle };
-        },
-      }),
-      add: tool({
-        description: '计算两个数字的和。',
-        parameters: z.object({
-          a: z.number().describe('第一个数字'),
-          b: z.number().describe('第二个数字'),
+        add: tool({
+          description: '计算两个数字的和。',
+          parameters: z.object({
+            a: z.number().describe('第一个数字'),
+            b: z.number().describe('第二个数字'),
+          }),
+          execute: async ({ a, b }) => {
+            console.log(`[Tool Executed] add: a=${a}, b=${b}`);
+            return { result: a + b };
+          },
         }),
-        execute: async ({ a, b }) => {
-          console.log(`[Tool Executed] add: a=${a}, b=${b}`);
-          return { result: a + b };
-        },
-      }),
 
-      rollDice: tool({
-        description: '摇一个或多个六面骰子，并返回结果。',
-        parameters: z.object({
-          count: z.number().min(1).max(100).describe('要摇的骰子数量'),
+        rollDice: tool({
+          description: '摇一个或多个六面骰子，并返回结果。',
+          parameters: z.object({
+            count: z.number().min(1).max(100).describe('要摇的骰子数量'),
+          }),
+          execute: async ({ count }) => {
+            console.log(`[Tool Executed] rollDice: count=${count}`);
+            const results = [];
+            let total = 0;
+            for (let i = 0; i < count; i++) {
+              const roll = Math.floor(Math.random() * 6) + 1;
+              results.push(roll);
+              total += roll;
+            }
+            // 返回一个结构化的结果
+            return {
+              count,
+              results,
+              total,
+            };
+          },
         }),
-        execute: async ({ count }) => {
-          console.log(`[Tool Executed] rollDice: count=${count}`);
-          const results = [];
-          let total = 0;
-          for (let i = 0; i < count; i++) {
-            const roll = Math.floor(Math.random() * 6) + 1;
-            results.push(roll);
-            total += roll;
-          }
-          // 返回一个结构化的结果
-          return {
-            count,
-            results,
-            total,
-          };
-        },
-      }),
 
-    },
-    // 工具调用轮次配置已移除，避免类型错误
-  });
+      },
+      // 工具调用轮次配置已移除，避免类型错误
+    });
 
-  console.log('[API/chat] 已调用 streamText，准备返回流');
-  return result.toDataStreamResponse();
+    console.log('[API/chat] 已调用 streamText，准备返回流');
+    return result.toDataStreamResponse();
+  } catch (error) {
+    console.error('[API/chat] StreamText 错误:', error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'AI处理失败，请重试'
+    });
+  }
 });

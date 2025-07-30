@@ -152,12 +152,32 @@ watch(messages, async (newMessages, oldMessages) => {
 // 保存对话历史到sessionStorage
 function saveConversationHistory() {
   try {
+    // 清理消息历史，移除未完成的工具调用
+    const cleanedMessages = messages.value.map(msg => {
+      if (msg.role === 'assistant' && msg.toolInvocations) {
+        // 只保留已完成的工具调用
+        const completedInvocations = msg.toolInvocations.filter(inv => inv.state === 'result');
+        
+        // 如果没有已完成的工具调用，移除toolInvocations属性
+        if (completedInvocations.length === 0) {
+          const { toolInvocations, ...cleanMsg } = msg;
+          return cleanMsg;
+        } else {
+          return {
+            ...msg,
+            toolInvocations: completedInvocations
+          };
+        }
+      }
+      return msg;
+    });
+
     const conversationData = {
-      messages: messages.value,
+      messages: cleanedMessages,
       timestamp: Date.now()
     };
     sessionStorage.setItem('ai-chat-history', JSON.stringify(conversationData));
-    console.log('[保存对话历史] 成功保存到sessionStorage');
+    console.log('[保存对话历史] 成功保存到sessionStorage，清理了未完成的工具调用');
   } catch (error) {
     console.error('[保存对话历史] 失败:', error);
   }
@@ -209,7 +229,7 @@ function executeNavigation(page: string) {
   // 使用window.location.href进行页面跳转
   setTimeout(() => {
     window.location.href = targetPath;
-  }, 500); // 增加延迟确保对话历史保存完成
+  }, 200); // 减少延迟，确保及时跳转
 }
 
 // 2. 保留原有的watch作为备用方案
