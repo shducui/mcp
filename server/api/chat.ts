@@ -30,33 +30,12 @@ export default defineEventHandler(async (event: H3Event) => {
   const { messages } = await readBody(event);
   console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
   
-  // 清理消息历史，确保没有未完成的工具调用
-  const cleanedMessages = messages.map((msg: any) => {
-    if (msg.role === 'assistant' && msg.toolInvocations) {
-      // 只保留已完成的工具调用
-      const completedInvocations = msg.toolInvocations.filter((inv: any) => inv.state === 'result');
-      
-      if (completedInvocations.length === 0) {
-        // 如果没有已完成的工具调用，移除toolInvocations属性
-        const { toolInvocations, ...cleanMsg } = msg;
-        return cleanMsg;
-      } else {
-        return {
-          ...msg,
-          toolInvocations: completedInvocations
-        };
-      }
-    }
-    return msg;
-  });
-
-  console.log('[API/chat] 清理后的消息：', JSON.stringify(cleanedMessages, null, 2));
-  
+  // 移除消息清理逻辑，直接使用原始消息
   try {
     // 使用最核心的 streamText 函数
     const result = await streamText({
       model: openai('gpt-4'),
-      messages: cleanedMessages,
+      messages,
       system:`
 你是网站智能助手。
 

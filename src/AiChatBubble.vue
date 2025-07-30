@@ -64,9 +64,7 @@ const chatResult = useChat({
       const pageName = (toolCall.args as { pageName: string }).pageName;
       console.log(`[onToolCall] 导航工具调用: ${pageName}`);
       
-      // 保存当前对话历史到sessionStorage
-      saveConversationHistory();
-      
+      // 移除保存对话历史的调用
       executeNavigation(pageName);
       
       // 返回工具执行结果
@@ -149,62 +147,7 @@ watch(messages, async (newMessages, oldMessages) => {
   }
 }, { deep: true });
 
-// 保存对话历史到sessionStorage
-function saveConversationHistory() {
-  try {
-    // 清理消息历史，移除未完成的工具调用
-    const cleanedMessages = messages.value.map(msg => {
-      if (msg.role === 'assistant' && msg.toolInvocations) {
-        // 只保留已完成的工具调用
-        const completedInvocations = msg.toolInvocations.filter(inv => inv.state === 'result');
-        
-        // 如果没有已完成的工具调用，移除toolInvocations属性
-        if (completedInvocations.length === 0) {
-          const { toolInvocations, ...cleanMsg } = msg;
-          return cleanMsg;
-        } else {
-          return {
-            ...msg,
-            toolInvocations: completedInvocations
-          };
-        }
-      }
-      return msg;
-    });
-
-    const conversationData = {
-      messages: cleanedMessages,
-      timestamp: Date.now()
-    };
-    sessionStorage.setItem('ai-chat-history', JSON.stringify(conversationData));
-    console.log('[保存对话历史] 成功保存到sessionStorage，清理了未完成的工具调用');
-  } catch (error) {
-    console.error('[保存对话历史] 失败:', error);
-  }
-}
-
-// 从sessionStorage恢复对话历史
-function restoreConversationHistory() {
-  try {
-    const savedData = sessionStorage.getItem('ai-chat-history');
-    if (savedData) {
-      const conversationData = JSON.parse(savedData);
-      // 检查数据是否是最近的（24小时内）
-      if (Date.now() - conversationData.timestamp < 24 * 60 * 60 * 1000) {
-        // 恢复消息历史
-        messages.value.splice(0, messages.value.length, ...conversationData.messages);
-        console.log('[恢复对话历史] 成功恢复对话历史');
-      } else {
-        console.log('[恢复对话历史] 历史数据过期，已清理');
-        sessionStorage.removeItem('ai-chat-history');
-      }
-    }
-  } catch (error) {
-    console.error('[恢复对话历史] 失败:', error);
-  }
-}
-
-// 执行页面导航（修改为不刷新页面的方式）
+// 执行页面导航
 function executeNavigation(page: string) {
   let targetPath = '/';
   switch (page) {
@@ -226,10 +169,10 @@ function executeNavigation(page: string) {
   
   console.log(`[Navigation] 执行跳转到: ${targetPath}`);
   
-  // 使用window.location.href进行页面跳转
+  // 直接跳转，不保存任何状态
   setTimeout(() => {
     window.location.href = targetPath;
-  }, 200); // 减少延迟，确保及时跳转
+  }, 100);
 }
 
 // 2. 保留原有的watch作为备用方案
@@ -330,8 +273,8 @@ onMounted(()=>{
   bubblePos.x = window.innerWidth - el.offsetWidth - m
   bubblePos.y = window.innerHeight - el.offsetHeight - m
   
-  // 恢复对话历史
-  restoreConversationHistory();
+  // 移除恢复对话历史的调用
+  // restoreConversationHistory();
 })
 
 
