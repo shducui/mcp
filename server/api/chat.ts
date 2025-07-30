@@ -41,9 +41,10 @@ export default defineEventHandler(async (event: H3Event) => {
   portfolio, about, contact, blog, archives
 
 用户说"跳转到关于我"、"关于我"、"about"时，调用 navigateToPage 工具，参数为 "about"
-用户说"跳转到首页"、"主页"、"portfolio"时，调用 navigateToPage 工具，参数为 "portfolio"
+用户说"跳转到首页"、"主页"、"portfolio"时，调用 navigateToPage 工具，参数为 "portfolio"  
+用户说"跳转到联系方式"、"联系"、"contact"时，调用 navigateToPage 工具，参数为 "contact"
 
-不要只回答文字，一定要调用工具！
+跳转成功后，不要说"页面已跳转"之类的话，而是要根据当前页面内容来回应用户。
 `,
     tools: {
       navigateToPage: tool({
@@ -53,7 +54,7 @@ export default defineEventHandler(async (event: H3Event) => {
         }),
         execute: async ({ pageName }) => {
           console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
-          return { page: pageName };
+          return { page: pageName, success: true };
         },
       }),
       zoomInOnPhoto: tool({
@@ -102,7 +103,7 @@ export default defineEventHandler(async (event: H3Event) => {
       }),
 
     },
-    // 确保工具调用结果能被传递
+    // 工具调用轮次配置已移除，避免类型错误
   });
 
   console.log('[API/chat] 已调用 streamText，准备返回流');

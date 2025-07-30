@@ -63,10 +63,14 @@ const chatResult = useChat({
     if (toolCall.toolName === 'navigateToPage') {
       const pageName = (toolCall.args as { pageName: string }).pageName;
       console.log(`[onToolCall] 导航工具调用: ${pageName}`);
+      
+      // 保存当前对话历史到sessionStorage
+      saveConversationHistory();
+      
       executeNavigation(pageName);
       
       // 返回工具执行结果
-      return { page: pageName };
+      return { page: pageName, success: true };
     }
     
     if (toolCall.toolName === 'zoomInOnPhoto') {
@@ -145,7 +149,42 @@ watch(messages, async (newMessages, oldMessages) => {
   }
 }, { deep: true });
 
-// 执行页面导航
+// 保存对话历史到sessionStorage
+function saveConversationHistory() {
+  try {
+    const conversationData = {
+      messages: messages.value,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem('ai-chat-history', JSON.stringify(conversationData));
+    console.log('[保存对话历史] 成功保存到sessionStorage');
+  } catch (error) {
+    console.error('[保存对话历史] 失败:', error);
+  }
+}
+
+// 从sessionStorage恢复对话历史
+function restoreConversationHistory() {
+  try {
+    const savedData = sessionStorage.getItem('ai-chat-history');
+    if (savedData) {
+      const conversationData = JSON.parse(savedData);
+      // 检查数据是否是最近的（24小时内）
+      if (Date.now() - conversationData.timestamp < 24 * 60 * 60 * 1000) {
+        // 恢复消息历史
+        messages.value.splice(0, messages.value.length, ...conversationData.messages);
+        console.log('[恢复对话历史] 成功恢复对话历史');
+      } else {
+        console.log('[恢复对话历史] 历史数据过期，已清理');
+        sessionStorage.removeItem('ai-chat-history');
+      }
+    }
+  } catch (error) {
+    console.error('[恢复对话历史] 失败:', error);
+  }
+}
+
+// 执行页面导航（修改为不刷新页面的方式）
 function executeNavigation(page: string) {
   let targetPath = '/';
   switch (page) {
@@ -164,12 +203,13 @@ function executeNavigation(page: string) {
       console.error(`[Navigation] 未知目标: ${page}`); 
       return;
   }
+  
   console.log(`[Navigation] 执行跳转到: ${targetPath}`);
   
-  // 添加延迟确保工具调用完成
+  // 使用window.location.href进行页面跳转
   setTimeout(() => {
     window.location.href = targetPath;
-  }, 100);
+  }, 500); // 增加延迟确保对话历史保存完成
 }
 
 // 2. 保留原有的watch作为备用方案
@@ -269,6 +309,9 @@ onMounted(()=>{
   const m = 20
   bubblePos.x = window.innerWidth - el.offsetWidth - m
   bubblePos.y = window.innerHeight - el.offsetHeight - m
+  
+  // 恢复对话历史
+  restoreConversationHistory();
 })
 
 
