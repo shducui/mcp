@@ -50,6 +50,7 @@ type UIMessage = {
   content: string
   result?: any
   toolName?: string
+  toolInvocations?: any[]
 }
 
 const chatResult = useChat({
@@ -84,6 +85,106 @@ const isRollingDice = computed(() => {
   const u = [...messages.value].reverse().find(m=>m.role==='user')
   return !!(u && /摇骰子|掷骰子/.test(u.content))
 })
+
+// 2. 增强 watch 方案，添加更详细的调试
+watch(messages, async (newMessages, oldMessages) => {
+  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
+
+  // 检查所有新增的消息
+  const newCount = newMessages.length;
+  const oldCount = oldMessages?.length || 0;
+  
+  for (let i = oldCount; i < newCount; i++) {
+    const message = newMessages[i];
+    console.log(`[Watcher] 检查消息 ${i}:`, JSON.stringify(message, null, 2));
+    
+    // 检查是否为工具调用结果
+    if (message.role === 'tool') {
+      console.log(`[Watcher] 发现工具消息:`, message);
+      handleToolResult(message);
+    }
+    
+    // 检查是否为助手消息且包含工具调用
+    if (message.role === 'assistant' && message.toolInvocations) {
+      console.log(`[Watcher] 发现助手工具调用:`, message.toolInvocations);
+      for (const invocation of message.toolInvocations) {
+        if (invocation.state === 'result') {
+          handleToolInvocation(invocation);
+        }
+      }
+    }
+  }
+
+  await nextTick();
+  if (messagesContainerRef.value) {
+    messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
+  }
+}, { deep: true });
+
+// 处理工具结果
+function handleToolResult(message: any) {
+  if (message.toolName === 'navigateToPage') {
+    const result = message.result;
+    if (result?.page) {
+      console.log(`[Tool Result] 导航到: ${result.page}`);
+      executeNavigation(result.page);
+    }
+  } else if (message.toolName === 'zoomInOnPhoto') {
+    const result = message.result;
+    if (result?.title) {
+      console.log(`[Tool Result] 放大图片: ${result.title}`);
+      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+        detail: { title: result.title },
+        bubbles: true,
+        composed: true
+      }));
+    }
+  }
+}
+
+// 处理工具调用
+function handleToolInvocation(invocation: any) {
+  if (invocation.toolName === 'navigateToPage') {
+    const result = invocation.result;
+    if (result?.page) {
+      console.log(`[Tool Invocation] 导航到: ${result.page}`);
+      executeNavigation(result.page);
+    }
+  } else if (invocation.toolName === 'zoomInOnPhoto') {
+    const result = invocation.result;
+    if (result?.title) {
+      console.log(`[Tool Invocation] 放大图片: ${result.title}`);
+      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+        detail: { title: result.title },
+        bubbles: true,
+        composed: true
+      }));
+    }
+  }
+}
+
+// 执行页面导航
+function executeNavigation(page: string) {
+  let targetPath = '/';
+  switch (page) {
+    case 'portfolio': 
+    case 'blog': 
+    case 'archives': 
+      targetPath = '/'; 
+      break;
+    case 'about': 
+      targetPath = '/about'; 
+      break;
+    case 'contact': 
+      targetPath = '/contact'; 
+      break;
+    default: 
+      console.error(`[Navigation] 未知目标: ${page}`); 
+      return;
+  }
+  console.log(`[Navigation] 执行跳转到: ${targetPath}`);
+  window.location.href = targetPath;
+}
 
 // 2. 回归我们最可靠的 watch 方案
 watch(messages, async (newMessages, oldMessages) => {

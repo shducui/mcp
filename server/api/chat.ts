@@ -28,38 +28,36 @@ export default defineEventHandler(async (event: H3Event) => {
   }
   
   const { messages } = await readBody(event);
-console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
+  console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
+  
   // 使用最核心的 streamText 函数
   const result = await streamText({
-    // model: openai('deepseek-chat'),
     model: openai('gpt-4'),
     messages,
     system:`
 你是网站智能助手。
 
-**当用户要求跳转页面时，一定** 调用 navigateToPage 工具，参数 pageName 必须是：
+**当用户要求跳转页面时，必须调用 navigateToPage 工具**，参数 pageName 必须是：
   portfolio, about, contact, blog, archives
 
-不要直接回答“好的”，也不要写普通文字，直接调用工具即可：
- 
-{"toolName":"navigateToPage","args":{"pageName":"about"}}
+用户说"跳转到关于我"、"关于我"、"about"时，调用 navigateToPage 工具，参数为 "about"
+用户说"跳转到首页"、"主页"、"portfolio"时，调用 navigateToPage 工具，参数为 "portfolio"
 
-同样，放大图片时调用 zoomInOnPhoto。
+不要只回答文字，一定要调用工具！
 `,
-    // 工具定义保持不变
     tools: {
-      navigateToPage: {
-        description:  '用于将用户导航或跳转到网站的特定页面。接收一个页面名称作为参数。',
+      navigateToPage: tool({
+        description: '用于将用户导航或跳转到网站的特定页面',
         parameters: z.object({
           pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
         }),
         execute: async ({ pageName }) => {
-        console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
-        return { page: pageName };
-        },  
-      },
-      zoomInOnPhoto: {
-        description: '用于放大显示用户指定的某一张照片。接收照片的标题作为参数。',
+          console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
+          return { page: pageName };
+        },
+      }),
+      zoomInOnPhoto: tool({
+        description: '用于放大显示用户指定的某一张照片',
         parameters: z.object({
           photoTitle: z.string().describe('照片的标题'),
         }),
@@ -67,45 +65,46 @@ console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
           console.log(`[ToolExecuted][zoomInOnPhoto] photoTitle = ${photoTitle}`);
           return { title: photoTitle };
         },
-      },
-        add: tool({
-            description: '计算两个数字的和。',
-            parameters: z.object({
-              a: z.number().describe('第一个数字'),
-              b: z.number().describe('第二个数字'),
-            }),
-            execute: async ({ a, b }) => {
-              console.log(`[Tool Executed] add: a=${a}, b=${b}`);
-              return { result: a + b };
-            },
-          }),
+      }),
+      add: tool({
+        description: '计算两个数字的和。',
+        parameters: z.object({
+          a: z.number().describe('第一个数字'),
+          b: z.number().describe('第二个数字'),
+        }),
+        execute: async ({ a, b }) => {
+          console.log(`[Tool Executed] add: a=${a}, b=${b}`);
+          return { result: a + b };
+        },
+      }),
 
-           rollDice: tool({
-            description: '摇一个或多个六面骰子，并返回结果。',
-            parameters: z.object({
-              count: z.number().min(1).max(100).describe('要摇的骰子数量'),
-            }),
-            execute: async ({ count }) => {
-              console.log(`[Tool Executed] rollDice: count=${count}`);
-              const results = [];
-              let total = 0;
-              for (let i = 0; i < count; i++) {
-                const roll = Math.floor(Math.random() * 6) + 1;
-                results.push(roll);
-                total += roll;
-              }
-              // 返回一个结构化的结果
-              return {
-                count,
-                results,
-                total,
-              };
-            },
-          }),
+      rollDice: tool({
+        description: '摇一个或多个六面骰子，并返回结果。',
+        parameters: z.object({
+          count: z.number().min(1).max(100).describe('要摇的骰子数量'),
+        }),
+        execute: async ({ count }) => {
+          console.log(`[Tool Executed] rollDice: count=${count}`);
+          const results = [];
+          let total = 0;
+          for (let i = 0; i < count; i++) {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            results.push(roll);
+            total += roll;
+          }
+          // 返回一个结构化的结果
+          return {
+            count,
+            results,
+            total,
+          };
+        },
+      }),
 
     },
+    // 确保工具调用结果能被传递
   });
-console.log('[API/chat] 已调用 streamText，准备返回流');
-  // 使用 toDataStreamResponse 将完整的、包含所有消息部分的流返回给前端
+
+  console.log('[API/chat] 已调用 streamText，准备返回流');
   return result.toDataStreamResponse();
 });
