@@ -32,7 +32,7 @@ console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
   // 使用最核心的 streamText 函数
   const result = await streamText({
     // model: openai('deepseek-chat'),
-    model: openai('gpt-4o'),
+    model: openai('gpt-4'),
     messages,
     system:`
 你是网站智能助手。
