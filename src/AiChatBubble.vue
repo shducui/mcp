@@ -347,7 +347,11 @@ function handleToolInvocation(invocation: any) {
 </script>
 
 <style>
-.ai-bubble-container { position: fixed; z-index:9999; font-size:12px; }
+.ai-bubble-container { 
+  position: fixed; 
+  z-index: 99999; /* 增加z-index，确保在放大图片之上 */
+  font-size: 12px; 
+}
 
 /* 悬浮球 */
 /* 悬浮球: 蓝紫渐变（调整为浅一些的配色） */
@@ -385,12 +389,18 @@ function handleToolInvocation(invocation: any) {
 
 /* 聊天面板 */
 .chat-panel {
-  position:relative;;
-  top:0; left:80px; /* 紧邻悬浮球右侧 */
-  width:300px; height:400px;
-  background:#fff; border-radius:8px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.15);
-  display:flex; flex-direction:column; overflow:hidden;
+  position: relative;
+  top: 0; 
+  left: 80px; /* 紧邻悬浮球右侧 */
+  width: 300px; 
+  height: 400px;
+  background: #fff; 
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden;
+  z-index: 99999; /* 确保聊天面板也在最上方 */
 }
 
 /* 消息区 */
