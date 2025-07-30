@@ -46,6 +46,9 @@ export default defineEventHandler(async (event: H3Event) => {
 用户说"跳转到首页"、"主页"、"portfolio"时，调用 navigateToPage 工具，参数为 "portfolio"  
 用户说"跳转到联系方式"、"联系"、"contact"时，调用 navigateToPage 工具，参数为 "contact"
 
+**当用户要求放大图片时，调用 zoomInOnPhoto 工具**
+**当用户要求缩小图片、关闭图片、恢复图片等时，调用 zoomOutPhoto 工具**
+
 跳转成功后，不要说"页面已跳转"之类的话，而是要根据当前页面内容来回应用户。
 `,
       tools: {
@@ -67,6 +70,16 @@ export default defineEventHandler(async (event: H3Event) => {
           execute: async ({ photoTitle }) => {
             console.log(`[ToolExecuted][zoomInOnPhoto] photoTitle = ${photoTitle}`);
             return { title: photoTitle };
+          },
+        }),
+        zoomOutPhoto: tool({
+          description: '用于缩小或关闭当前放大的图片，恢复到正常显示状态',
+          parameters: z.object({
+            action: z.enum(['close', 'restore']).optional().describe('操作类型：关闭或恢复'),
+          }),
+          execute: async ({ action = 'close' }) => {
+            console.log(`[ToolExecuted][zoomOutPhoto] action = ${action}`);
+            return { action, success: true };
           },
         }),
         add: tool({

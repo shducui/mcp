@@ -64,7 +64,6 @@ const chatResult = useChat({
       const pageName = (toolCall.args as { pageName: string }).pageName;
       console.log(`[onToolCall] 导航工具调用: ${pageName}`);
       
-      // 移除保存对话历史的调用
       executeNavigation(pageName);
       
       // 返回工具执行结果
@@ -82,6 +81,19 @@ const chatResult = useChat({
       
       // 返回工具执行结果
       return { title: photoTitle };
+    }
+    
+    if (toolCall.toolName === 'zoomOutPhoto') {
+      const action = (toolCall.args as { action?: string }).action || 'close';
+      console.log(`[onToolCall] 图片缩小工具调用: ${action}`);
+      window.dispatchEvent(new CustomEvent('ai-zoom-out-photo', {
+        detail: { action },
+        bubbles: true,
+        composed: true
+      }));
+      
+      // 返回工具执行结果
+      return { action, success: true };
     }
     
     // 其他工具的默认处理
@@ -216,6 +228,18 @@ watch(messages, async (newMessages, oldMessages) => {
         }
         break;
       }
+      case 'zoomOutPhoto': {
+        const result = (lastMessage as any).result as { action?: string };
+        if (result?.action) {
+          console.log(`[Watcher] 检测到缩小图片指令, 动作: ${result.action}`);
+          window.dispatchEvent(new CustomEvent('ai-zoom-out-photo', {
+            detail: { action: result.action },
+            bubbles: true,
+            composed: true
+          }));
+        }
+        break;
+      }
     }
   }
 
@@ -297,6 +321,18 @@ function handleToolInvocation(invocation: any) {
         console.log(`[handleToolInvocation] 放大图片: ${result.title}`);
         window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
           detail: { title: result.title },
+          bubbles: true,
+          composed: true
+        }));
+      }
+      break;
+    }
+    case 'zoomOutPhoto': {
+      const result = invocation.result as { action?: string };
+      if (result?.action) {
+        console.log(`[handleToolInvocation] 缩小图片: ${result.action}`);
+        window.dispatchEvent(new CustomEvent('ai-zoom-out-photo', {
+          detail: { action: result.action },
           bubbles: true,
           composed: true
         }));
