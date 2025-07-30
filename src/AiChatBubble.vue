@@ -56,6 +56,35 @@ type UIMessage = {
 const chatResult = useChat({
   // 确保 API 地址指向我们新的 /api/chat
   api: props.apiUrl.includes('/chat') ? props.apiUrl : props.apiUrl.replace('/assistant', '/chat'),
+  onToolCall: async ({ toolCall }) => {
+    console.log('[onToolCall] 工具被调用:', toolCall);
+    
+    // 直接在这里处理工具调用结果
+    if (toolCall.toolName === 'navigateToPage') {
+      const pageName = (toolCall.args as { pageName: string }).pageName;
+      console.log(`[onToolCall] 导航工具调用: ${pageName}`);
+      executeNavigation(pageName);
+      
+      // 返回工具执行结果
+      return { page: pageName };
+    }
+    
+    if (toolCall.toolName === 'zoomInOnPhoto') {
+      const photoTitle = (toolCall.args as { photoTitle: string }).photoTitle;
+      console.log(`[onToolCall] 图片放大工具调用: ${photoTitle}`);
+      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+        detail: { title: photoTitle },
+        bubbles: true,
+        composed: true
+      }));
+      
+      // 返回工具执行结果
+      return { title: photoTitle };
+    }
+    
+    // 其他工具的默认处理
+    return {};
+  }
 });
 
 const messages = chatResult.messages as import('vue').Ref<UIMessage[]>;
@@ -98,17 +127,12 @@ watch(messages, async (newMessages, oldMessages) => {
     const message = newMessages[i];
     console.log(`[Watcher] 检查消息 ${i}:`, JSON.stringify(message, null, 2));
     
-    // 检查是否为工具调用结果
-    if (message.role === 'tool') {
-      console.log(`[Watcher] 发现工具消息:`, message);
-      handleToolResult(message);
-    }
-    
     // 检查是否为助手消息且包含工具调用
     if (message.role === 'assistant' && message.toolInvocations) {
       console.log(`[Watcher] 发现助手工具调用:`, message.toolInvocations);
       for (const invocation of message.toolInvocations) {
         if (invocation.state === 'result') {
+          console.log(`[Watcher] 工具调用完成:`, invocation);
           handleToolInvocation(invocation);
         }
       }
@@ -120,48 +144,6 @@ watch(messages, async (newMessages, oldMessages) => {
     messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
   }
 }, { deep: true });
-
-// 处理工具结果
-function handleToolResult(message: any) {
-  if (message.toolName === 'navigateToPage') {
-    const result = message.result;
-    if (result?.page) {
-      console.log(`[Tool Result] 导航到: ${result.page}`);
-      executeNavigation(result.page);
-    }
-  } else if (message.toolName === 'zoomInOnPhoto') {
-    const result = message.result;
-    if (result?.title) {
-      console.log(`[Tool Result] 放大图片: ${result.title}`);
-      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
-        detail: { title: result.title },
-        bubbles: true,
-        composed: true
-      }));
-    }
-  }
-}
-
-// 处理工具调用
-function handleToolInvocation(invocation: any) {
-  if (invocation.toolName === 'navigateToPage') {
-    const result = invocation.result;
-    if (result?.page) {
-      console.log(`[Tool Invocation] 导航到: ${result.page}`);
-      executeNavigation(result.page);
-    }
-  } else if (invocation.toolName === 'zoomInOnPhoto') {
-    const result = invocation.result;
-    if (result?.title) {
-      console.log(`[Tool Invocation] 放大图片: ${result.title}`);
-      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
-        detail: { title: result.title },
-        bubbles: true,
-        composed: true
-      }));
-    }
-  }
-}
 
 // 执行页面导航
 function executeNavigation(page: string) {
@@ -183,10 +165,14 @@ function executeNavigation(page: string) {
       return;
   }
   console.log(`[Navigation] 执行跳转到: ${targetPath}`);
-  window.location.href = targetPath;
+  
+  // 添加延迟确保工具调用完成
+  setTimeout(() => {
+    window.location.href = targetPath;
+  }, 100);
 }
 
-// 2. 回归我们最可靠的 watch 方案
+// 2. 保留原有的watch作为备用方案
 watch(messages, async (newMessages, oldMessages) => {
   if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
 
@@ -287,6 +273,35 @@ onMounted(()=>{
 
 
 // submitMessage is provided by useAssistant, so no need to redefine it here.
+function handleToolInvocation(invocation: any) {
+  if (!invocation || !invocation.toolName) return;
+
+  switch (invocation.toolName) {
+    case 'navigateToPage': {
+      const result = invocation.result as { page?: string };
+      if (result?.page) {
+        console.log(`[handleToolInvocation] 导航到页面: ${result.page}`);
+        executeNavigation(result.page);
+      }
+      break;
+    }
+    case 'zoomInOnPhoto': {
+      const result = invocation.result as { title?: string };
+      if (result?.title) {
+        console.log(`[handleToolInvocation] 放大图片: ${result.title}`);
+        window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+          detail: { title: result.title },
+          bubbles: true,
+          composed: true
+        }));
+      }
+      break;
+    }
+    default:
+      console.warn(`[handleToolInvocation] 未知工具: ${invocation.toolName}`, invocation);
+  }
+}
+
 </script>
 
 <style>
