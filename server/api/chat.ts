@@ -53,14 +53,20 @@ console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
         parameters: z.object({
           pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
         }),
-        execute: async ({ pageName }) => ({ page: pageName }),
+        execute: async ({ pageName }) => {
+        console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
+        return { page: pageName };
+        },  
       },
       zoomInOnPhoto: {
         description: '用于放大显示用户指定的某一张照片。接收照片的标题作为参数。',
         parameters: z.object({
           photoTitle: z.string().describe('照片的标题'),
         }),
-        execute: async ({ photoTitle }) => ({ title: photoTitle }),
+        execute: async ({ photoTitle }) => {
+          console.log(`[ToolExecuted][zoomInOnPhoto] photoTitle = ${photoTitle}`);
+          return { title: photoTitle };
+        },
       },
         add: tool({
             description: '计算两个数字的和。',
