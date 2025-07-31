@@ -36,8 +36,11 @@ export default defineEventHandler(async (event: H3Event) => {
     const result = await streamText({
       model: openai('gpt-4'),
       messages,
+      maxSteps: 5, // 添加这个参数，允许AI在工具调用后继续生成响应
       system:`
 你是网站智能助手。
+
+**重要：当你调用任何工具后，必须立即向用户报告工具执行的结果，不要等待用户追问。**
 
 **当用户要求跳转页面时，必须调用 navigateToPage 工具**，参数 pageName 必须是：
   portfolio, about, contact, blog, archives
@@ -48,6 +51,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
 **当用户要求放大图片时，调用 zoomInOnPhoto 工具**
 **当用户要求缩小图片、关闭图片、恢复图片等时，调用 zoomOutPhoto 工具**
+
+**摇骰子工具使用后，必须告诉用户具体的点数结果和总数。**
 
 跳转成功后，不要说"页面已跳转"之类的话，而是要根据当前页面内容来回应用户。
 `,
@@ -95,7 +100,7 @@ export default defineEventHandler(async (event: H3Event) => {
         }),
 
         rollDice: tool({
-          description: '摇一个或多个六面骰子，并返回结果。',
+          description: '摇一个或多个六面骰子，并返回结果。调用后必须向用户报告具体的点数。',
           parameters: z.object({
             count: z.number().min(1).max(100).describe('要摇的骰子数量'),
           }),
