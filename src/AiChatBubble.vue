@@ -108,7 +108,7 @@ const isLoading = chatResult.isLoading as import('vue').Ref<boolean>;
 const error = chatResult.error as import('vue').Ref<any>;
 
 // ... ASR 和其他 UI 逻辑保持不变 ...
-const { isRecording, start, stop } = useAudioRecorder((text) => {
+const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => {
   const t = text.trim()
   if (['发送','提交','发出'].includes(t)) return void handleSubmit()
   if (['清空','清除','删除'].includes(t)) return void (input.value = '')
@@ -259,6 +259,14 @@ function onFormSubmit() {
 watch(error, (newError) => {
   if (newError) {
     console.error('[Assistant] An error occurred:', newError);
+  }
+});
+
+// 监控ASR错误
+watch(asrError, (newError) => {
+  if (newError) {
+    console.error('[ASR] 语音识别错误:', newError);
+    // 可以在这里添加用户提示
   }
 });
 
