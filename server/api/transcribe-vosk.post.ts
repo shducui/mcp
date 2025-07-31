@@ -4,6 +4,15 @@ import { join } from 'path'
 import { spawn } from 'child_process'
 
 export default defineEventHandler(async (event) => {
+  // 在 Vercel 等云平台上返回不支持消息
+  if (process.env.VERCEL || process.env.NETLIFY) {
+    throw createError({
+      statusCode: 501,
+      statusMessage: '云平台不支持服务器端语音识别，请使用 Web Speech API'
+    })
+  }
+
+  // 本地开发环境的处理逻辑
   try {
     const formData = await readMultipartFormData(event)
     const audioFile = formData?.find(item => item.name === 'audio')
@@ -15,22 +24,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 保存临时音频文件
-    const tempPath = join(process.cwd(), 'temp', `audio_${Date.now()}.webm`)
-    await writeFile(tempPath, audioFile.data)
-
-    try {
-      // 使用 Python 脚本处理 Vosk 识别
-      const transcript = await transcribeWithVosk(tempPath)
-      
-      // 清理临时文件
-      await unlink(tempPath)
-      
-      return { transcript }
-    } catch (error) {
-      // 确保清理临时文件
-      await unlink(tempPath).catch(() => {})
-      throw error
+    // 这里可以添加本地 Vosk 处理逻辑
+    return { 
+      transcript: '本地转录功能需要配置 Vosk 环境',
+      message: '请使用 Web Speech API 进行语音识别'
     }
   } catch (error: any) {
     throw createError({

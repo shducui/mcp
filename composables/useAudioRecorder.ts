@@ -4,12 +4,74 @@ import { ref, readonly } from 'vue';
 export function useAudioRecorder(onTranscriptionComplete: (text: string) => void) {
   const isRecording = ref(false);
   const error = ref('');
+  const isSupported = ref(true);
 
   let mediaRecorder: MediaRecorder | null = null;
   let audioChunks: Blob[] = [];
+  let recognition: any = null;
+
+  // 检查浏览器支持
+  const checkSupport = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    isSupported.value = !!SpeechRecognition;
+    return SpeechRecognition;
+  };
+
+  const initSpeechRecognition = () => {
+    const SpeechRecognition = checkSupport();
+    if (!SpeechRecognition) return null;
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'zh-CN';
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        onTranscriptionComplete(finalTranscript);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      error.value = `语音识别错误: ${event.error}`;
+      isRecording.value = false;
+    };
+
+    recognition.onend = () => {
+      isRecording.value = false;
+    };
+
+    return recognition;
+  };
 
   const start = async () => {
     if (isRecording.value) return;
+    
+    error.value = '';
+    
+    // 优先使用 Web Speech API
+    if (checkSupport()) {
+      try {
+        if (!recognition) {
+          recognition = initSpeechRecognition();
+        }
+        if (recognition) {
+          recognition.start();
+          isRecording.value = true;
+          return;
+        }
+      } catch (e: any) {
+        console.warn('Web Speech API 启动失败，使用录音模式:', e.message);
+      }
+    }
+
+    // 降级到录音上传模式
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
@@ -22,47 +84,43 @@ export function useAudioRecorder(onTranscriptionComplete: (text: string) => void
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType });
         await uploadAudio(audioBlob);
-        stream.getTracks().forEach(track => track.stop()); // 停止麦克风
+        stream.getTracks().forEach(track => track.stop());
       };
       
       mediaRecorder.start();
       isRecording.value = true;
-      error.value = '';
     } catch (e: any) {
       error.value = `启动录音失败: ${e.message}`;
     }
   };
 
   const stop = () => {
-    if (!isRecording.value || !mediaRecorder) return;
-    mediaRecorder.stop();
+    if (!isRecording.value) return;
+    
+    if (recognition && checkSupport()) {
+      try {
+        recognition.stop();
+      } catch (e) {
+        console.warn('停止语音识别失败:', e);
+      }
+    }
+    
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+    }
+    
     isRecording.value = false;
   };
 
   const uploadAudio = async (audioBlob: Blob) => {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.webm');
-    
-    try {
-      // 使用本地 Vosk 转录 API
-      const response = await fetch('/api/transcribe-vosk', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) throw new Error('转录请求失败');
-
-      const data = await response.json();
-      if (data.transcript) {
-        onTranscriptionComplete(data.transcript);
-      }
-    } catch (e: any) {
-      error.value = `上传音频失败: ${e.message}`;
-    }
+    // 这里可以实现客户端音频处理或上传到其他服务
+    error.value = '当前环境不支持服务器端转录，请使用支持 Web Speech API 的浏览器';
   };
 
   return {
     isRecording: readonly(isRecording),
     error: readonly(error),
+    isSupported: readonly(isSupported),
     start,
     stop,
   };
