@@ -44,8 +44,8 @@ export function useAudioRecorder(onTranscriptionComplete: (text: string) => void
     formData.append('audio', audioBlob, 'recording.webm');
     
     try {
-      // 调用我们自己的 Nuxt 后端代理 API
-      const response = await fetch('/api/transcribe', {
+      // 使用本地 Vosk 转录 API
+      const response = await fetch('/api/transcribe-vosk', {
         method: 'POST',
         body: formData,
       });
