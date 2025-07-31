@@ -9,7 +9,6 @@ const { messages, input, handleSubmit, isLoading } = useChat({ api: '/api/chat' 
 //asr
 const { isRecording, start: startRecording, stop: stopRecording, error: recorderError } = useAudioRecorder((transcript) => {
   
-  // input.value = transcript;
   const text = transcript.trim();
 
   // -------- 语音命令处理 --------
@@ -20,6 +19,12 @@ const { isRecording, start: startRecording, stop: stopRecording, error: recorder
 
   if (["清空", "清除", "删除"].includes(text)) {
     input.value = '';
+    return;
+  }
+
+  if (["结束对话", "退出语音", "关闭语音", "结束语音", "停止录音"].includes(text)) {
+    stopRecording(); // 停止录音
+    console.log('[语音] 用户主动结束对话');
     return;
   }
 

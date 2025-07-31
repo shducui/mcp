@@ -34,6 +34,13 @@ export function useAudioRecorder(onTranscriptionComplete: (text: string) => void
         }
       }
       if (finalTranscript) {
+        // 检查是否包含结束对话的命令
+        const text = finalTranscript.trim();
+        if (['结束对话', '退出语音', '关闭语音', '结束语音', '停止录音'].includes(text)) {
+          console.log('[ASR] 检测到结束对话命令，自动停止录音');
+          stop(); // 自动停止录音
+          return; // 不传递给回调函数
+        }
         onTranscriptionComplete(finalTranscript);
       }
     };
