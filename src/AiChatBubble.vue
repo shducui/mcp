@@ -266,7 +266,14 @@ watch(error, (newError) => {
 watch(asrError, (newError) => {
   if (newError) {
     console.error('[ASR] 语音识别错误:', newError);
-    // 可以在这里添加用户提示
+    // 在聊天界面显示错误提示
+    if (messagesContainerRef.value) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'msg-line msg-ai error-msg';
+      errorDiv.textContent = `语音识别错误: ${newError}`;
+      messagesContainerRef.value.appendChild(errorDiv);
+      messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
+    }
   }
 });
 

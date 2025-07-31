@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const config = {
-  runtime: 'edge',
-};
-
 export default async function handler(req: NextRequest) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
@@ -17,11 +13,17 @@ export default async function handler(req: NextRequest) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
     }
 
+    // 检查文件大小限制 (4.5MB for Whisper API)
+    if (audioFile.size > 4.5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Audio file too large. Maximum size is 4.5MB' }, { status: 400 });
+    }
+
     // 使用OpenAI Whisper API进行转录
     const openaiFormData = new FormData();
     openaiFormData.append('file', audioFile);
     openaiFormData.append('model', 'whisper-1');
     openaiFormData.append('language', 'zh'); // 指定中文
+    openaiFormData.append('response_format', 'json');
 
     const response = await fetch('https://api.v3.cm/v1/audio/transcriptions', {
       method: 'POST',
@@ -32,13 +34,23 @@ export default async function handler(req: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
     
+    if (!result.text || result.text.trim() === '') {
+      return NextResponse.json({ 
+        transcript: '',
+        success: true,
+        message: 'No speech detected' 
+      });
+    }
+    
     return NextResponse.json({ 
-      transcript: result.text,
+      transcript: result.text.trim(),
       success: true 
     });
 
