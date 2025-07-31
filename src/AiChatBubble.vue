@@ -55,7 +55,7 @@ type UIMessage = {
 
 const chatResult = useChat({
   // 修复API路径 - 移除错误的路径处理逻辑
-  api: '/api/chat',
+  api: props.apiUrl.includes('/chat') ? props.apiUrl : props.apiUrl.replace('/assistant', '/chat'),
   onToolCall: async ({ toolCall }) => {
     console.log('[onToolCall] 工具被调用:', toolCall);
     
