@@ -37,34 +37,44 @@ export default defineEventHandler(async (event: H3Event) => {
       model: openai('gpt-4'),
       messages,
       maxSteps: 5, // 添加这个参数，允许AI在工具调用后继续生成响应
-      system:`
-你是网站智能助手。
+      system:`你是一个部署在名为 "KANBAN" 的复杂生产管理系统中的智能助手。
+      你的核心任务是根据用户的语音或文字指令，调用工具来快速导航到系统的各个功能页面。
 
-**重要：当你调用任何工具后，必须立即向用户报告工具执行的结果，不要等待用户追问。**
+      【指令规则】
+      1. 当用户的意图是导航、跳转、打开、查看任何一个功能页面时，你 **必须** 使用 'navigateToPage' 工具。
+      2. 你必须从下面的可用路径列表中选择一个完全匹配的路径作为参数。**严禁** 编造路径或猜测路径。
+      3. 例如：用户说“带我去看用户管理”，你应该调用工具并传入路径 '/admin/system/users'。用户说“首页”或“仪表板”，你应该传入 '/dashboard'。
+      4. 完成工具调用后，用简洁的语言确认操作即可。
 
-**当用户要求跳转页面时，必须调用 navigateToPage 工具**，参数 pageName 必须是：
-  portfolio, about, contact, blog, archives
-
-用户说"跳转到关于我"、"关于我"、"about"时，调用 navigateToPage 工具，参数为 "about"
-用户说"跳转到首页"、"主页"、"portfolio"时，调用 navigateToPage 工具，参数为 "portfolio"  
-用户说"跳转到联系方式"、"联系"、"contact"时，调用 navigateToPage 工具，参数为 "contact"
-
-**当用户要求放大图片时，调用 zoomInOnPhoto 工具**
-**当用户要求缩小图片、关闭图片、恢复图片等时，调用 zoomOutPhoto 工具**
-
-**摇骰子工具使用后，必须告诉用户具体的点数结果和总数。**
-
-跳转成功后，不要说"页面已跳转"之类的话，而是要根据当前页面内容来回应用户。
-`,
+      【可用路径列表】
+      - '/dashboard': 主仪表板/首页
+      - '/dashboard/pms/safety/pyramid': 安全金字塔
+      - '/dashboard/pms/quality/fpy-daily': FPY日报
+      - '/admin': 管理后台首页
+      - '/admin/system/users': 用户管理
+      - '/admin/system/roles': 角色管理
+      - '/admin/system/departments': 部门管理
+      - '/admin/production/products': 产品管理
+      - '/admin/production/work-orders': 工单管理`,
       tools: {
         navigateToPage: tool({
           description: '用于将用户导航或跳转到网站的特定页面',
           parameters: z.object({
-            pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
+            path:z.enum([
+              '/dashboard',
+              '/dashboard/pms/safety/pyramid',
+              '/dashboard/pms/quality/fpy-daily',
+              '/admin',
+              '/admin/system/users',
+              '/admin/system/roles',
+              '/admin/system/departments',
+              '/admin/production/products',
+              '/admin/production/work-orders',
+            ]).describe('目标页面的URL路径，必须从可用路径列表中严格选择。'),
           }),
-          execute: async ({ pageName }) => {
-            console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
-            return { page: pageName, success: true };
+          execute: async ({ path }) => {
+            console.log(`[ToolExecuted][navigateToPage] path = ${path}`);
+            return { path: path, success: true };
           },
         }),
         zoomInOnPhoto: tool({

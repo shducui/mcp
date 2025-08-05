@@ -7137,8 +7137,8 @@ const Sf = {
       api: t.apiUrl.includes("/chat") ? t.apiUrl : t.apiUrl.replace("/assistant", "/chat"),
       onToolCall: async ({ toolCall: v }) => {
         if (console.log("[onToolCall] 工具被调用:", v), v.toolName === "navigateToPage") {
-          const b = v.args.pageName;
-          return console.log(`[onToolCall] 导航工具调用: ${b}`), x(b), { page: b, success: !0 };
+          const b = v.args.path;
+          return console.log(`[onToolCall] 导航工具调用: ${b}`), x(b), { path: b, success: !0 };
         }
         if (v.toolName === "zoomInOnPhoto") {
           const b = v.args.photoTitle;

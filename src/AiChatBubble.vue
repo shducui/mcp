@@ -61,13 +61,13 @@ const chatResult = useChat({
     
     // 直接在这里处理工具调用结果
     if (toolCall.toolName === 'navigateToPage') {
-      const pageName = (toolCall.args as { pageName: string }).pageName;
-      console.log(`[onToolCall] 导航工具调用: ${pageName}`);
-      
-      executeNavigation(pageName);
-      
+      const path = (toolCall.args as { path: string }).path;
+      console.log(`[onToolCall] 导航工具调用: ${path}`);
+
+      executeNavigation(path);
+
       // 返回工具执行结果
-      return { page: pageName, success: true };
+      return { path: path, success: true };
     }
     
     if (toolCall.toolName === 'zoomInOnPhoto') {
