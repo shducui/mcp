@@ -7162,15 +7162,15 @@ const Sf = {
       const w = O.trim();
       if (["发送", "提交", "发出"].includes(w)) {
         if (o.value.trim()) {
-          console.log("[语音指令] 执行发送，当前输入内容:", o.value);
+          console.log("[语音指令] 执行发送，内容:", `"${o.value}"`);
           const C = new Event("submit", { bubbles: !0, cancelable: !0 });
           s(C);
         } else
-          console.log("[语音指令] 没有内容可发送");
+          console.log("[语音指令] 输入框为空，无可发送内容");
         return;
       }
       if (["清空", "清除", "删除"].includes(w)) {
-        console.log("[语音指令] 执行清除"), o.value = "";
+        console.log("[语音指令] 执行清空"), o.value = "";
         return;
       }
       if (w.endsWith("发送") && w.length > 2) {
@@ -7183,7 +7183,7 @@ const Sf = {
           return;
         }
       }
-      o.value = w, console.log(`[语音指令] 设置输入内容: "${w}"`);
+      console.log(`[语音指令] 设置输入内容: "${w}"`), o.value = w;
     }), h = Fe(!1), m = Dn({ x: 0, y: 0 }), x = Fe(null), A = Fe(null), z = Fe(!1);
     function L() {
       h.value = !h.value;

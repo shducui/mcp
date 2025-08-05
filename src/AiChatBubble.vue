@@ -110,47 +110,53 @@ const error = chatResult.error as import('vue').Ref<any>;
 
 // ... ASR 和其他 UI 逻辑保持不变 ...
 const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => {
-  const t = text.trim()
+  const t = text.trim();
   
-  // 处理发送指令
-  if (['发送','提交','发出'].includes(t)) {
+  // 1.  优先处理前端直接操作指令
+  //     如果匹配成功，则执行动作并用 `return` 立即终止函数，避免后续操作。
+  
+  //  处理“发送”指令：
+  if (['发送', '提交', '发出'].includes(t)) {
     if (input.value.trim()) {
-      console.log('[语音指令] 执行发送，当前输入内容:', input.value)
-      // 创建一个表单提交事件
-      const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
-      handleSubmit(submitEvent)
+      console.log('[语音指令] 执行发送，内容:', `"${input.value}"`);
+      //  创建一个模拟的提交事件来触发 handleSubmit
+      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+      handleSubmit(submitEvent);
     } else {
-      console.log('[语音指令] 没有内容可发送')
+      console.log('[语音指令] 输入框为空，无可发送内容');
     }
-    return
+    return; //  <--- 关键：处理完后必须 return
   }
   
-  // 处理清除指令
-  if (['清空','清除','删除'].includes(t)) {
-    console.log('[语音指令] 执行清除')
-    input.value = ''
-    return
+  //  处理“清空”指令：
+  if (['清空', '清除', '删除'].includes(t)) {
+    console.log('[语音指令] 执行清空');
+    input.value = '';
+    return; //  <--- 关键：处理完后必须 return
   }
-  
-  // 处理组合指令：内容+发送
+
+  // 2.  处理组合指令，例如：“跳转到首页然后发送”
+  //     这部分可以根据需求扩展，暂时简化处理
   if (t.endsWith('发送') && t.length > 2) {
-    const content = t.slice(0, -2).trim()
+    const content = t.slice(0, -2).trim();
     if (content) {
-      console.log(`[语音指令] 设置内容并发送: "${content}"`)
-      input.value = content
-      // 使用nextTick确保input值已更新
+      console.log(`[语音指令] 设置内容并发送: "${content}"`);
+      input.value = content;
+      // 使用 nextTick 确保 Vue 更新了 input 的值之后再提交
       nextTick(() => {
-        const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
-        handleSubmit(submitEvent)
-      })
-      return
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        handleSubmit(submitEvent);
+      });
+      return; // <--- 关键：处理完后必须 return
     }
   }
   
-  // 其他情况：将识别的文本设置为输入内容
-  input.value = t
-  console.log(`[语音指令] 设置输入内容: "${t}"`)
-})
+  // 3.  如果不是以上任何指令，则将识别的文本视为普通内容放入输入框
+  console.log(`[语音指令] 设置输入内容: "${t}"`);
+  input.value = t;
+});
+  
+
 // const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => {
 //   const t = text.trim()
 //
