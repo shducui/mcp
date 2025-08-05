@@ -66,6 +66,7 @@ const chatResult = useChat({
 
       executeNavigation(path);
 
+
       // 返回工具执行结果
       return { path: path, success: true };
     }
@@ -163,19 +164,16 @@ watch(messages, async (newMessages, oldMessages) => {
 function executeNavigation(page: string) {
   let targetPath = '/';
   switch (page) {
-    case 'portfolio': 
-    case 'blog': 
-    case 'archives': 
-      targetPath = '/'; 
+    case 'dashboard':
+    case 'home':
+    case 'index':
+      targetPath = '/dashboard';
       break;
-    case 'about': 
-      targetPath = '/about'; 
+    case 'admin':
+      targetPath = '/admin';
       break;
-    case 'contact': 
-      targetPath = '/contact'; 
-      break;
-    default: 
-      console.error(`[Navigation] 未知目标: ${page}`); 
+    default:
+      console.error(`[Navigation] 未知目标: ${page}`);
       return;
   }
   
@@ -315,6 +313,7 @@ onMounted(()=>{
   // 移除恢复对话历史的调用
   // restoreConversationHistory();
 })
+
 
 
 // submitMessage is provided by useAssistant, so no need to redefine it here.

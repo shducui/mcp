@@ -7194,16 +7194,13 @@ const Sf = {
     function x(v) {
       let b = "/";
       switch (v) {
-        case "portfolio":
-        case "blog":
-        case "archives":
-          b = "/";
+        case "dashboard":
+        case "home":
+        case "index":
+          b = "/dashboard";
           break;
-        case "about":
-          b = "/about";
-          break;
-        case "contact":
-          b = "/contact";
+        case "admin":
+          b = "/admin";
           break;
         default:
           console.error(`[Navigation] 未知目标: ${v}`);
