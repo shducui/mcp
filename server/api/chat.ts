@@ -48,7 +48,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
       【可用路径列表】
       - '/dashboard': 主仪表板/首页
-      - '/dashboard/rps': RPS管理
+      - '/dashboard/rcps': RCPS管理
       - '/dashboard/production-office': 生产办公室
       - '/dashboard/workshop': 车间看板
       `,
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event: H3Event) => {
           parameters: z.object({
             path:z.enum([
               '/dashboard',
-              '/dashboard/rps',
+              '/dashboard/rcps',
               '/dashboard/production-office',
               '/dashboard/workshop',
               // '/admin',

@@ -116,7 +116,7 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
   //     如果匹配成功，则执行动作并用 `return` 立即终止函数，避免后续操作。
   
   //  处理“发送”指令：
-  if (['发送', '提交', '发出','发送。'].includes(t)) {
+  if (['发送', '提交', '发出','发送。','提交。', '发出。'].includes(t)) {
     if (input.value.trim()) {
       console.log('[语音指令] 执行发送，内容:', `"${input.value}"`);
       //  创建一个模拟的提交事件来触发 handleSubmit
@@ -129,29 +129,12 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
   }
   
   //  处理“清空”指令：
-  if (['清空', '清除', '删除','清除。'].includes(t)) {
+  if (['清空', '清除', '删除','清除。','清空。','删除。'].includes(t)) {
     console.log('[语音指令] 执行清空');
     input.value = '';
     return; //  <--- 关键：处理完后必须 return
   }
 
-  // // 2.  处理组合指令，例如：“跳转到首页然后发送”
-  // //     这部分可以根据需求扩展，暂时简化处理
-  // if (t.endsWith('发送') && t.length > 2) {
-  //   const content = t.slice(0, -2).trim();
-  //   if (content) {
-  //     console.log(`[语音指令] 设置内容并发送: "${content}"`);
-  //     input.value = content;
-  //     // 使用 nextTick 确保 Vue 更新了 input 的值之后再提交
-  //     nextTick(() => {
-  //       const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-  //       handleSubmit(submitEvent);
-  //     });
-  //     return; // <--- 关键：处理完后必须 return
-  //   }
-  // }
-  
-  // 3.  如果不是以上任何指令，则将识别的文本视为普通内容放入输入框
   console.log(`[语音指令] 设置输入内容: "${t}"`);
   input.value = t;
 });

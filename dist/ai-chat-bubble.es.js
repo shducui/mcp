@@ -7059,7 +7059,7 @@ function Df(e) {
         m.results[V].isFinal && (x += m.results[V][0].transcript);
       if (x) {
         const V = x.trim();
-        if (["结束对话", "退出语音", "关闭语音", "结束语音", "停止录音"].includes(V)) {
+        if (["结束对话", "退出语音", "关闭语音", "结束语音", "停止录音", "结束对话。", "退出语音。", "关闭语音。", "结束语音。", "停止录音。"].includes(V)) {
           console.log("[ASR] 检测到结束对话命令，自动停止录音"), d();
           return;
         }
@@ -7160,7 +7160,7 @@ const Sf = {
       }
     }), r = n.messages, o = n.input, s = n.handleSubmit, i = n.isLoading, l = n.error, { isRecording: a, start: f, stop: d, error: u } = Df((O) => {
       const w = O.trim();
-      if (["发送", "提交", "发出", "发送。"].includes(w)) {
+      if (["发送", "提交", "发出", "发送。", "提交。", "发出。"].includes(w)) {
         if (o.value.trim()) {
           console.log("[语音指令] 执行发送，内容:", `"${o.value}"`);
           const A = new Event("submit", { bubbles: !0, cancelable: !0 });
@@ -7169,7 +7169,7 @@ const Sf = {
           console.log("[语音指令] 输入框为空，无可发送内容");
         return;
       }
-      if (["清空", "清除", "删除", "清除。"].includes(w)) {
+      if (["清空", "清除", "删除", "清除。", "清空。", "删除。"].includes(w)) {
         console.log("[语音指令] 执行清空"), o.value = "";
         return;
       }
