@@ -115,25 +115,67 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
   // 处理发送指令
   if (['发送','提交','发出'].includes(t)) {
     if (input.value.trim()) {
-      console.log('[语音指令] 执行发送')
-      handleSubmit()
+      console.log('[语音指令] 执行发送，当前输入内容:', input.value)
+      // 创建一个表单提交事件
+      const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+      handleSubmit(submitEvent)
     } else {
       console.log('[语音指令] 没有内容可发送')
     }
-    return // 重要：直接返回，不执行后面的 input.value = t
+    return
   }
   
   // 处理清除指令
   if (['清空','清除','删除'].includes(t)) {
     console.log('[语音指令] 执行清除')
     input.value = ''
-    return // 重要：直接返回，不执行后面的 input.value = t
+    return
+  }
+  
+  // 处理组合指令：内容+发送
+  if (t.endsWith('发送') && t.length > 2) {
+    const content = t.slice(0, -2).trim()
+    if (content) {
+      console.log(`[语音指令] 设置内容并发送: "${content}"`)
+      input.value = content
+      // 使用nextTick确保input值已更新
+      nextTick(() => {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true })
+        handleSubmit(submitEvent)
+      })
+      return
+    }
   }
   
   // 其他情况：将识别的文本设置为输入内容
   input.value = t
   console.log(`[语音指令] 设置输入内容: "${t}"`)
 })
+// const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => {
+//   const t = text.trim()
+//
+//   // 处理发送指令
+//   if (['发送','提交','发出'].includes(t)) {
+//     if (input.value.trim()) {
+//       console.log('[语音指令] 执行发送')
+//       handleSubmit()
+//     } else {
+//       console.log('[语音指令] 没有内容可发送')
+//     }
+//     return // 重要：直接返回，不执行后面的 input.value = t
+//   }
+  
+//   // 处理清除指令
+//   if (['清空','清除','删除'].includes(t)) {
+//     console.log('[语音指令] 执行清除')
+//     input.value = ''
+//     return // 重要：直接返回，不执行后面的 input.value = t
+//   }
+  
+//   // 其他情况：将识别的文本设置为输入内容
+//   input.value = t
+//   console.log(`[语音指令] 设置输入内容: "${t}"`)
+// })
 const isChatOpen = ref(false)
 const bubblePos = reactive({ x: 0, y: 0 })
 const containerRef = ref<HTMLElement|null>(null)
