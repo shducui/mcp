@@ -36,123 +36,329 @@
 </template>
 
 <script setup lang="ts">
-import { useChat } from '@ai-sdk/vue';
-import { ref, watch, reactive, computed, onMounted, nextTick } from 'vue';
-import { useAudioRecorder } from '../composables/useAudioRecorder';
+import { useChat } from '@ai-sdk/vue'
+import { ref, watch, reactive, computed, onMounted, nextTick } from 'vue'
+import { useAudioRecorder } from '../composables/useAudioRecorder'
 
-const props = defineProps<{ apiUrl: string }>();
+const props = defineProps<{ apiUrl: string }>()
 
-// 统一使用 onToolCall 方案
-const { messages, input, handleSubmit, isLoading, error } = useChat({
-  api: props.apiUrl,
-  
-  // onToolCall 是 AI SDK 推荐的、用于在前端处理工具调用的标准方式
-  onToolCall: ({ toolCall }) => {
-    console.log('[onToolCall] AI 请求调用工具:', toolCall);
+// 1. 回归 useChat
+// 补充 UIMessage 类型定义，添加 toolName 可选属性
+type UIMessage = {
+  id: string
+  role: 'system' | 'user' | 'assistant' | 'data' | 'tool'
+  content: string
+  result?: any
+  toolName?: string
+  toolInvocations?: any[]
+}
+
+const chatResult = useChat({
+  // 修复API路径 - 移除错误的路径处理逻辑
+  api: props.apiUrl.includes('/chat') ? props.apiUrl : props.apiUrl.replace('/assistant', '/chat'),
+  onToolCall: async ({ toolCall }) => {
+    console.log('[onToolCall] 工具被调用:', toolCall);
     
-    switch (toolCall.toolName) {
-      case 'navigateToPage': {
-        const path = (toolCall.args as { path: string }).path;
-        console.log(`[onToolCall] 准备派发导航事件, 目标: ${path}`);
-        // 通过派发事件与宿主 React 应用通信
-        window.dispatchEvent(new CustomEvent('ai-navigate', {
-          detail: { path: path }
-        }));
-        // 返回结果给 AI SDK，让它知道工具已执行
-        return { path };
-      }
-        
-      case 'zoomInOnPhoto': {
-        const photoTitle = (toolCall.args as { photoTitle: string }).photoTitle;
-        console.log(`[onToolCall] 准备派发图片放大事件, 目标: ${photoTitle}`);
-        window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
-          detail: { title: photoTitle }
-        }));
-        return { title: photoTitle };
-      }
-        
-      default: {
-        // 对于未知的工具，返回一个空对象
-        return {};
-      }
+    // 直接在这里处理工具调用结果
+    if (toolCall.toolName === 'navigateToPage') {
+      const pageName = (toolCall.args as { pageName: string }).pageName;
+      console.log(`[onToolCall] 导航工具调用: ${pageName}`);
+      
+      executeNavigation(pageName);
+      
+      // 返回工具执行结果
+      return { page: pageName, success: true };
     }
+    
+    if (toolCall.toolName === 'zoomInOnPhoto') {
+      const photoTitle = (toolCall.args as { photoTitle: string }).photoTitle;
+      console.log(`[onToolCall] 图片放大工具调用: ${photoTitle}`);
+      window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+        detail: { title: photoTitle },
+        bubbles: true,
+        composed: true
+      }));
+      
+      // 返回工具执行结果
+      return { title: photoTitle };
+    }
+    
+    if (toolCall.toolName === 'zoomOutPhoto') {
+      const action = (toolCall.args as { action?: string }).action || 'close';
+      console.log(`[onToolCall] 图片缩小工具调用: ${action}`);
+      window.dispatchEvent(new CustomEvent('ai-zoom-out-photo', {
+        detail: { action },
+        bubbles: true,
+        composed: true
+      }));
+      
+      // 返回工具执行结果
+      return { action, success: true };
+    }
+    
+    // 其他工具的默认处理
+    return {};
   }
 });
 
-// ASR 功能逻辑
-const { isRecording, start, stop } = useAudioRecorder((text) => {
-  const t = text.trim();
-  if (['发送','提交','发出'].includes(t)) return void handleSubmit();
-  if (['清空','清除','删除'].includes(t)) return void (input.value = '');
-  input.value = t;
-});
+const messages = chatResult.messages as import('vue').Ref<UIMessage[]>;
+const input = chatResult.input as import('vue').Ref<string>;
+const handleSubmit = chatResult.handleSubmit as (e?: Event) => void;
+const isLoading = chatResult.isLoading as import('vue').Ref<boolean>;
+const error = chatResult.error as import('vue').Ref<any>;
 
-// UI 状态和辅助函数
-const isChatOpen = ref(false);
-const bubblePos = reactive({ x: 0, y: 0 });
-const containerRef = ref<HTMLElement|null>(null);
-const messagesContainerRef = ref<HTMLElement|null>(null);
-const isDragging = ref(false);
-function toggleChat() { isChatOpen.value = !isChatOpen.value; }
-function handleBubbleClick() { if (!isDragging.value) toggleChat(); }
-function isAudioUrl(c: string) { return c.trim().startsWith('<audio'); }
-function extractAudioSrc(h: string) { const m = h.match(/src="([^"]+)"/); return m ? m[1] : null; }
-
+// ... ASR 和其他 UI 逻辑保持不变 ...
+const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => {
+  const t = text.trim()
+  if (['发送','提交','发出'].includes(t)) return void handleSubmit()
+  if (['清空','清除','删除'].includes(t)) return void (input.value = '')
+  input.value = t
+})
+const isChatOpen = ref(false)
+const bubblePos = reactive({ x: 0, y: 0 })
+const containerRef = ref<HTMLElement|null>(null)
+const messagesContainerRef = ref<HTMLElement|null>(null)
+const isDragging = ref(false)
+function toggleChat() { isChatOpen.value = !isChatOpen.value }
+function handleBubbleClick() { if (!isDragging.value) toggleChat() }
+function isAudioUrl(c: string) { return c.trim().startsWith('<audio') }
+function extractAudioSrc(h: string) { const m = h.match(/src="([^"]+)"/); return m ? m[1] : null }
 const isRollingDice = computed(() => {
-  if (!isLoading.value) return false;
-  const u = [...messages.value].reverse().find(m => m.role === 'user');
-  return !!(u && /摇骰子|掷骰子/.test(u.content));
-});
+  if (!isLoading.value) return false
+  const u = [...messages.value].reverse().find(m=>m.role==='user')
+  return !!(u && /摇骰子|掷骰子/.test(u.content))
+})
 
-// 只保留一个用于自动滚动的 watch
-watch(messages, async () => {
+// 2. 增强 watch 方案，添加更详细的调试
+watch(messages, async (newMessages, oldMessages) => {
+  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
+
+  // 检查所有新增的消息
+  const newCount = newMessages.length;
+  const oldCount = oldMessages?.length || 0;
+  
+  for (let i = oldCount; i < newCount; i++) {
+    const message = newMessages[i];
+    console.log(`[Watcher] 检查消息 ${i}:`, JSON.stringify(message, null, 2));
+    
+    // 检查是否为助手消息且包含工具调用
+    if (message.role === 'assistant' && message.toolInvocations) {
+      console.log(`[Watcher] 发现助手工具调用:`, message.toolInvocations);
+      for (const invocation of message.toolInvocations) {
+        if (invocation.state === 'result') {
+          console.log(`[Watcher] 工具调用完成:`, invocation);
+          handleToolInvocation(invocation);
+        }
+      }
+    }
+  }
+
   await nextTick();
   if (messagesContainerRef.value) {
     messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
   }
 }, { deep: true });
 
-// 错误监控
+// 执行页面导航
+function executeNavigation(page: string) {
+  let targetPath = '/';
+  switch (page) {
+    case 'portfolio': 
+    case 'blog': 
+    case 'archives': 
+      targetPath = '/'; 
+      break;
+    case 'about': 
+      targetPath = '/about'; 
+      break;
+    case 'contact': 
+      targetPath = '/contact'; 
+      break;
+    default: 
+      console.error(`[Navigation] 未知目标: ${page}`); 
+      return;
+  }
+  
+  console.log(`[Navigation] 执行跳转到: ${targetPath}`);
+  
+  // 直接跳转，不保存任何状态
+  setTimeout(() => {
+    window.location.href = targetPath;
+  }, 100);
+}
+
+// 2. 保留原有的watch作为备用方案
+watch(messages, async (newMessages, oldMessages) => {
+  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
+
+  const lastMessage = newMessages[newMessages.length - 1];
+  if (!lastMessage) return;
+
+  // 这是调试的关键，再次确认消息结构
+  console.log('最新消息对象结构:', JSON.stringify(lastMessage, null, 2));
+
+  // 我们期望这次能在这里捕获到 role: 'tool' 的消息
+  if (lastMessage.role === 'tool' && lastMessage.toolName) {
+    switch (lastMessage.toolName) {
+      case 'navigateToPage': {
+        const result = (lastMessage as any).result as { page?: string };
+        if (result?.page) {
+          console.log(`[Watcher] 检测到导航指令, 目标: ${result.page}`);
+          let targetPath = '/';
+          switch (result.page) {
+            case 'portfolio': case 'blog': case 'archives': targetPath = '/'; break;
+            case 'about': targetPath = '/about'; break;
+            case 'contact': targetPath = '/contact'; break;
+            default: console.error(`[Watcher] 未知导航目标: ${result.page}`); return;
+          }
+          console.log(`[Watcher] 执行页面跳转到: ${targetPath}`);
+          window.location.href = targetPath;
+        }
+        break;
+      }
+      case 'zoomInOnPhoto': {
+        const result = (lastMessage as any).result as { title?: string };
+        if (result?.title) {
+          console.log(`[Watcher] 检测到放大图片指令, 目标: ${result.title}`);
+          window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+            detail: { title: result.title },
+            bubbles: true,
+            composed: true
+          }));
+        }
+        break;
+      }
+      case 'zoomOutPhoto': {
+        const result = (lastMessage as any).result as { action?: string };
+        if (result?.action) {
+          console.log(`[Watcher] 检测到缩小图片指令, 动作: ${result.action}`);
+          window.dispatchEvent(new CustomEvent('ai-zoom-out-photo', {
+            detail: { action: result.action },
+            bubbles: true,
+            composed: true
+          }));
+        }
+        break;
+      }
+    }
+  }
+
+  await nextTick();
+  if (messagesContainerRef.value) {
+    messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
+  }
+}, { deep: true });
+
+// 表单提交处理函数
+function onFormSubmit() {
+  if (!input.value.trim() || isLoading.value) return;
+  handleSubmit(new Event('submit') as any);
+}
+
+// 监控错误状态
 watch(error, (newError) => {
   if (newError) {
-    console.error('[AI Bubble] useChat hook 发生错误:', newError);
+    console.error('[Assistant] An error occurred:', newError);
   }
 });
 
-// 拖拽和挂载逻辑
+// 监控ASR错误
+watch(asrError, (newError) => {
+  if (newError) {
+    console.error('[ASR] 语音识别错误:', newError);
+    // 在聊天界面显示错误提示
+    if (messagesContainerRef.value) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'msg-line msg-ai error-msg';
+      errorDiv.textContent = `语音识别错误: ${newError}`;
+      messagesContainerRef.value.appendChild(errorDiv);
+      messagesContainerRef.value.scrollTop = messagesContainerRef.value.scrollHeight;
+    }
+  }
+});
+
+
+
 function startDrag(e: MouseEvent) {
-  e.preventDefault();
-  const el = containerRef.value!;
-  const sx = e.clientX, sy = e.clientY;
-  const ox = bubblePos.x, oy = bubblePos.y;
-  let moved = false;
+  e.preventDefault()
+  const el = containerRef.value!
+  const sx = e.clientX, sy = e.clientY
+  const ox = bubblePos.x, oy = bubblePos.y
+  let moved = false
 
   function mm(ev: MouseEvent) {
-    const dx = ev.clientX - sx, dy = ev.clientY - sy;
-    if (!moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-      moved = true; isDragging.value = true;
+    const dx = ev.clientX - sx, dy = ev.clientY - sy
+    if (!moved && (Math.abs(dx)>5 || Math.abs(dy)>5)) {
+      moved = true; isDragging.value = true
     }
     if (moved) {
-      const nx = Math.min(Math.max(0, ox + dx), window.innerWidth - el.offsetWidth);
-      const ny = Math.min(Math.max(0, oy + dy), window.innerHeight - el.offsetHeight);
-      bubblePos.x = nx; bubblePos.y = ny;
+      const nx = Math.min(Math.max(0, ox+dx), window.innerWidth - el.offsetWidth)
+      const ny = Math.min(Math.max(0, oy+dy), window.innerHeight - el.offsetHeight)
+      bubblePos.x = nx; bubblePos.y = ny
     }
   }
   function mu() {
-    document.removeEventListener('mousemove', mm);
-    document.removeEventListener('mouseup', mu);
-    setTimeout(() => isDragging.value = false, 10);
+    document.removeEventListener('mousemove', mm)
+    document.removeEventListener('mouseup', mu)
+    setTimeout(()=>isDragging.value=false, 10)
   }
-  document.addEventListener('mousemove', mm);
-  document.addEventListener('mouseup', mu);
+  document.addEventListener('mousemove', mm)
+  document.addEventListener('mouseup', mu)
 }
 
-onMounted(() => {
-  const el = containerRef.value!;
-  const m = 20;
-  bubblePos.x = window.innerWidth - el.offsetWidth - m;
-  bubblePos.y = window.innerHeight - el.offsetHeight - m;
-});
+onMounted(()=>{
+  const el = containerRef.value!
+  const m = 20
+  bubblePos.x = window.innerWidth - el.offsetWidth - m
+  bubblePos.y = window.innerHeight - el.offsetHeight - m
+  
+  // 移除恢复对话历史的调用
+  // restoreConversationHistory();
+})
+
+
+// submitMessage is provided by useAssistant, so no need to redefine it here.
+function handleToolInvocation(invocation: any) {
+  if (!invocation || !invocation.toolName) return;
+
+  switch (invocation.toolName) {
+    case 'navigateToPage': {
+      const result = invocation.result as { page?: string };
+      if (result?.page) {
+        console.log(`[handleToolInvocation] 导航到页面: ${result.page}`);
+        executeNavigation(result.page);
+      }
+      break;
+    }
+    case 'zoomInOnPhoto': {
+      const result = invocation.result as { title?: string };
+      if (result?.title) {
+        console.log(`[handleToolInvocation] 放大图片: ${result.title}`);
+        window.dispatchEvent(new CustomEvent('ai-zoom-photo', {
+          detail: { title: result.title },
+          bubbles: true,
+          composed: true
+        }));
+      }
+      break;
+    }
+    case 'zoomOutPhoto': {
+      const result = invocation.result as { action?: string };
+      if (result?.action) {
+        console.log(`[handleToolInvocation] 缩小图片: ${result.action}`);
+        window.dispatchEvent(new CustomEvent('ai-zoom-out-photo', {
+          detail: { action: result.action },
+          bubbles: true,
+          composed: true
+        }));
+      }
+      break;
+    }
+    default:
+      console.warn(`[handleToolInvocation] 未知工具: ${invocation.toolName}`, invocation);
+  }
+}
+
 </script>
 
 <style>
