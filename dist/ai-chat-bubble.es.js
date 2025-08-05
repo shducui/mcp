@@ -1101,23 +1101,23 @@ function Jl(e, t, n = Z) {
     if (!(!(u.flags & 1) || !u.dirty && !D))
       if (t) {
         const N = u.run();
-        if (o || V || (z ? N.some((w, O) => yt(w, P[O])) : yt(N, P))) {
+        if (o || V || (z ? N.some((O, w) => yt(O, P[w])) : yt(N, P))) {
           m && m();
-          const w = It;
+          const O = It;
           It = u;
           try {
-            const O = [
+            const w = [
               N,
               // pass undefined as the old value when it's changed for the first time
               P === Rn ? void 0 : z && P[0] === Rn ? [] : P,
               x
             ];
-            P = N, a ? a(t, 3, O) : (
+            P = N, a ? a(t, 3, w) : (
               // @ts-expect-error
-              t(...O)
+              t(...w)
             );
           } finally {
-            It = w;
+            It = O;
           }
         }
       } else
@@ -1975,8 +1975,8 @@ function Pa(e) {
     unmounted: K,
     render: D,
     renderTracked: N,
-    renderTriggered: w,
-    errorCaptured: O,
+    renderTriggered: O,
+    errorCaptured: w,
     serverPrefetch: R,
     // public API
     expose: U,
@@ -2054,7 +2054,7 @@ function Pa(e) {
   function ae(B, J) {
     k(J) ? J.forEach((xe) => B(xe.bind(n))) : J && B(J.bind(n));
   }
-  if (ae(Ea, u), ae(lo, h), ae(va, m), ae(Na, x), ae(_a, V), ae(ba, z), ae(Sa, O), ae(Da, N), ae(xa, w), ae(wa, j), ae(ao, K), ae(Oa, R), k(U))
+  if (ae(Ea, u), ae(lo, h), ae(va, m), ae(Na, x), ae(_a, V), ae(ba, z), ae(Sa, w), ae(Da, N), ae(xa, O), ae(wa, j), ae(ao, K), ae(Oa, R), k(U))
     if (U.length) {
       const B = e.exposed || (e.exposed = {});
       U.forEach((J) => {
@@ -2805,7 +2805,7 @@ function rc(e, t) {
       _ = h(c), o(c), c = _;
     o(p);
   }, N = (c, p, _, E, b, y, T, I, S) => {
-    p.type === "svg" ? T = "svg" : p.type === "math" && (T = "mathml"), c == null ? w(
+    p.type === "svg" ? T = "svg" : p.type === "math" && (T = "mathml"), c == null ? O(
       p,
       _,
       E,
@@ -2823,7 +2823,7 @@ function rc(e, t) {
       I,
       S
     );
-  }, w = (c, p, _, E, b, y, T, I) => {
+  }, O = (c, p, _, E, b, y, T, I) => {
     let S, v;
     const { props: $, shapeFlag: A, transition: M, dirs: H } = c;
     if (S = c.el = i(
@@ -2840,7 +2840,7 @@ function rc(e, t) {
       wr(c, y),
       T,
       I
-    ), H && Ot(c, null, E, "created"), O(S, c, c.scopeId, T, E), $) {
+    ), H && Ot(c, null, E, "created"), w(S, c, c.scopeId, T, E), $) {
       for (const ne in $)
         ne !== "value" && !nn(ne) && s(S, ne, null, $[ne], y, E);
       "value" in $ && s(S, "value", null, $.value, y), (v = $.onVnodeBeforeMount) && Xe(v, E, c);
@@ -2850,7 +2850,7 @@ function rc(e, t) {
     G && M.beforeEnter(S), r(S, p, _), ((v = $ && $.onVnodeMounted) || G || H) && Pe(() => {
       v && Xe(v, E, c), G && M.enter(S), H && Ot(c, null, E, "mounted");
     }, b);
-  }, O = (c, p, _, E, b) => {
+  }, w = (c, p, _, E, b) => {
     if (_ && m(c, _), E)
       for (let y = 0; y < E.length; y++)
         m(c, E[y]);
@@ -2858,7 +2858,7 @@ function rc(e, t) {
       let y = b.subTree;
       if (g.NODE_ENV !== "production" && y.patchFlag > 0 && y.patchFlag & 2048 && (y = po(y.children) || y), p === y || wi(y.type) && (y.ssContent === p || y.ssFallback === p)) {
         const T = b.vnode;
-        O(
+        w(
           c,
           T,
           T.scopeId,
@@ -3727,12 +3727,12 @@ function Fo(e) {
   try {
     if (n.shapeFlag & 4) {
       const D = o || r, N = g.NODE_ENV !== "production" && m.__isScriptSetup ? new Proxy(D, {
-        get(w, O, R) {
+        get(O, w, R) {
           return C(
             `Property '${String(
-              O
+              w
             )}' was accessed via 'this'. Avoid using 'this' in templates.`
-          ), Reflect.get(w, O, R);
+          ), Reflect.get(O, w, R);
         }
       }) : D;
       L = He(
@@ -3777,15 +3777,15 @@ function Fo(e) {
           s
         )), P = Et(P, j, !1, !0);
       else if (g.NODE_ENV !== "production" && !Lr && P.type !== ke) {
-        const w = Object.keys(l), O = [], R = [];
-        for (let U = 0, se = w.length; U < se; U++) {
-          const ie = w[U];
-          wn(ie) ? Bn(ie) || O.push(ie[2].toLowerCase() + ie.slice(3)) : R.push(ie);
+        const O = Object.keys(l), w = [], R = [];
+        for (let U = 0, se = O.length; U < se; U++) {
+          const ie = O[U];
+          wn(ie) ? Bn(ie) || w.push(ie[2].toLowerCase() + ie.slice(3)) : R.push(ie);
         }
         R.length && C(
           `Extraneous non-props attributes (${R.join(", ")}) were passed to component but could not be automatically inherited because component renders fragment or text or teleport root nodes.`
-        ), O.length && C(
-          `Extraneous non-emits event listeners (${O.join(", ")}) were passed to component but could not be automatically inherited because component renders fragment or text root nodes. If the listener is intended to be a component custom event listener only, declare it using the "emits" option.`
+        ), w.length && C(
+          `Extraneous non-emits event listeners (${w.join(", ")}) were passed to component but could not be automatically inherited because component renders fragment or text root nodes. If the listener is intended to be a component custom event listener only, declare it using the "emits" option.`
         );
       }
     }
@@ -5995,10 +5995,10 @@ async function sf({
       break;
     const N = of(P, K);
     K = 0;
-    const w = j.decode(N, { stream: !0 }).split(`
-`).filter((O) => O !== "").map(nf);
-    for (const { type: O, value: R } of w)
-      switch (O) {
+    const O = j.decode(N, { stream: !0 }).split(`
+`).filter((w) => w !== "").map(nf);
+    for (const { type: w, value: R } of O)
+      switch (w) {
         case "text":
           await t?.(R);
           break;
@@ -6048,7 +6048,7 @@ async function sf({
           await z?.(R);
           break;
         default: {
-          const U = O;
+          const U = w;
           throw new Error(`Unknown stream part type: ${U}`);
         }
       }
@@ -6066,9 +6066,9 @@ async function lf({
   var l, a;
   const f = i?.role === "assistant";
   let d = f ? 1 + // find max step in existing tool invocations:
-  ((a = (l = i.toolInvocations) == null ? void 0 : l.reduce((N, w) => {
-    var O;
-    return Math.max(N, (O = w.step) != null ? O : 0);
+  ((a = (l = i.toolInvocations) == null ? void 0 : l.reduce((N, O) => {
+    var w;
+    return Math.max(N, (w = O.step) != null ? w : 0);
   }, 0)) != null ? a : 0) : 0;
   const u = f ? structuredClone(i) : {
     id: o(),
@@ -6078,13 +6078,13 @@ async function lf({
     parts: []
   };
   let h, m, x;
-  function V(N, w) {
-    const O = u.parts.find(
+  function V(N, O) {
+    const w = u.parts.find(
       (R) => R.type === "tool-invocation" && R.toolInvocation.toolCallId === N
     );
-    O != null ? O.toolInvocation = w : u.parts.push({
+    w != null ? w.toolInvocation = O : u.parts.push({
       type: "tool-invocation",
-      toolInvocation: w
+      toolInvocation: O
     });
   }
   const z = [];
@@ -6098,7 +6098,7 @@ async function lf({
   function D() {
     const N = [...z];
     L?.length && (u.annotations = L);
-    const w = {
+    const O = {
       // deep copy the message to ensure that deep changes (msg attachments) are updated
       // with SolidJS. SolidJS uses referential integration of sub-objects to detect changes.
       ...structuredClone(u),
@@ -6110,7 +6110,7 @@ async function lf({
       revisionId: o()
     };
     t({
-      message: w,
+      message: O,
       data: N,
       replaceLastMessage: f
     });
@@ -6124,12 +6124,12 @@ async function lf({
       }, u.parts.push(h)) : h.text += N, u.content += N, D();
     },
     onReasoningPart(N) {
-      var w;
+      var O;
       x == null ? (x = { type: "text", text: N }, m?.details.push(x)) : x.text += N, m == null ? (m = {
         type: "reasoning",
         reasoning: N,
         details: [x]
-      }, u.parts.push(m)) : m.reasoning += N, u.reasoning = ((w = u.reasoning) != null ? w : "") + N, D();
+      }, u.parts.push(m)) : m.reasoning += N, u.reasoning = ((O = u.reasoning) != null ? O : "") + N, D();
     },
     onReasoningSignaturePart(N) {
       x != null && (x.signature = N.signature);
@@ -6164,63 +6164,63 @@ async function lf({
         toolName: N.toolName,
         index: u.toolInvocations.length
       };
-      const w = {
+      const O = {
         state: "partial-call",
         step: d,
         toolCallId: N.toolCallId,
         toolName: N.toolName,
         args: void 0
       };
-      u.toolInvocations.push(w), V(N.toolCallId, w), D();
+      u.toolInvocations.push(O), V(N.toolCallId, O), D();
     },
     onToolCallDeltaPart(N) {
-      const w = j[N.toolCallId];
-      w.text += N.argsTextDelta;
-      const { value: O } = $u(w.text), R = {
+      const O = j[N.toolCallId];
+      O.text += N.argsTextDelta;
+      const { value: w } = $u(O.text), R = {
         state: "partial-call",
-        step: w.step,
+        step: O.step,
         toolCallId: N.toolCallId,
-        toolName: w.toolName,
-        args: O
+        toolName: O.toolName,
+        args: w
       };
-      u.toolInvocations[w.index] = R, V(N.toolCallId, R), D();
+      u.toolInvocations[O.index] = R, V(N.toolCallId, R), D();
     },
     async onToolCallPart(N) {
-      const w = {
+      const O = {
         state: "call",
         step: d,
         ...N
       };
-      if (j[N.toolCallId] != null ? u.toolInvocations[j[N.toolCallId].index] = w : (u.toolInvocations == null && (u.toolInvocations = []), u.toolInvocations.push(w)), V(N.toolCallId, w), D(), n) {
-        const O = await n({ toolCall: N });
-        if (O != null) {
+      if (j[N.toolCallId] != null ? u.toolInvocations[j[N.toolCallId].index] = O : (u.toolInvocations == null && (u.toolInvocations = []), u.toolInvocations.push(O)), V(N.toolCallId, O), D(), n) {
+        const w = await n({ toolCall: N });
+        if (w != null) {
           const R = {
             state: "result",
             step: d,
             ...N,
-            result: O
+            result: w
           };
           u.toolInvocations[u.toolInvocations.length - 1] = R, V(N.toolCallId, R), D();
         }
       }
     },
     onToolResultPart(N) {
-      const w = u.toolInvocations;
-      if (w == null)
+      const O = u.toolInvocations;
+      if (O == null)
         throw new Error("tool_result must be preceded by a tool_call");
-      const O = w.findIndex(
+      const w = O.findIndex(
         (U) => U.toolCallId === N.toolCallId
       );
-      if (O === -1)
+      if (w === -1)
         throw new Error(
           "tool_result must be preceded by a tool_call with the same toolCallId"
         );
       const R = {
-        ...w[O],
+        ...O[w],
         state: "result",
         ...N
       };
-      w[O] = R, V(N.toolCallId, R), D();
+      O[w] = R, V(N.toolCallId, R), D();
     },
     onDataPart(N) {
       z.push(...N), D();
@@ -6723,11 +6723,11 @@ function bs() {
   }));
   var x = function(j, P) {
     return Ut(e, void 0, void 0, function() {
-      var K, D, N, w, O, R, U, se = this;
+      var K, D, N, O, w, R, U, se = this;
       return Bt(this, function(ie) {
         switch (ie.label) {
           case 0:
-            return K = m.data === void 0, D = h.value, D ? (N = s.cache.get(D), w = N && N.data, m.isValidating = !0, m.isLoading = !w, w && (m.data = w.data, m.error = w.error), O = j || o, !O || !s.isDocumentVisible() && !K || P?.forceRevalidate !== void 0 && !P?.forceRevalidate ? (m.isValidating = !1, m.isLoading = !1, [
+            return K = m.data === void 0, D = h.value, D ? (N = s.cache.get(D), O = N && N.data, m.isValidating = !0, m.isLoading = !O, O && (m.data = O.data, m.error = O.error), w = j || o, !w || !s.isDocumentVisible() && !K || P?.forceRevalidate !== void 0 && !P?.forceRevalidate ? (m.isValidating = !1, m.isLoading = !1, [
               2
               /*return*/
             ]) : N && (R = !!(Date.now() - N.createdAt >= s.dedupingInterval || P?.forceRevalidate), !R) ? (m.isValidating = !1, m.isLoading = !1, [
@@ -6739,7 +6739,7 @@ function bs() {
                 return Bt(this, function(B) {
                   switch (B.label) {
                     case 0:
-                      return re = Cr.get(D), re ? [3, 2] : (ye = Array.isArray(D) ? D : [D], pe = O.apply(void 0, Ef([], yf(ye), !1)), Cr.set(D, pe, s.dedupingInterval), [4, _s(D, pe, s.cache, u)]);
+                      return re = Cr.get(D), re ? [3, 2] : (ye = Array.isArray(D) ? D : [D], pe = w.apply(void 0, Ef([], yf(ye), !1)), Cr.set(D, pe, s.dedupingInterval), [4, _s(D, pe, s.cache, u)]);
                     case 1:
                       return B.sent(), [3, 4];
                     case 2:
@@ -6754,7 +6754,7 @@ function bs() {
                   }
                 });
               });
-            }, w && s.revalidateDebounce ? (setTimeout(function() {
+            }, O && s.revalidateDebounce ? (setTimeout(function() {
               return Ut(se, void 0, void 0, function() {
                 return Bt(this, function(re) {
                   switch (re.label) {
@@ -6861,21 +6861,21 @@ function xf({
   maxSteps: 1
 }) {
   var j, P;
-  const K = t ?? h(), D = `${e}|${K}`, { data: N, mutate: w } = Of(
+  const K = t ?? h(), D = `${e}|${K}`, { data: N, mutate: O } = Of(
     D,
     () => {
       var Y;
       return (Y = ys[D]) != null ? Y : Pn(n);
     }
-  ), O = (j = Es[K]) != null ? j : Es[K] = Fe(
+  ), w = (j = Es[K]) != null ? j : Es[K] = Fe(
     "ready"
   );
   (P = N.value) != null || (N.value = Pn(n));
-  const R = (Y) => (ys[D] = Y, w()), U = N, se = Fe(void 0), ie = Fe(void 0);
+  const R = (Y) => (ys[D] = Y, O()), U = N, se = Fe(void 0), ie = Fe(void 0);
   let re = null;
   async function ye(Y, { data: ce, headers: _e, body: Ae } = {}) {
     var De, Ye, Mt;
-    se.value = void 0, O.value = "submitted";
+    se.value = void 0, w.value = "submitted";
     const Tn = U.value.length, wt = Jr(
       (De = U.value[U.value.length - 1]) == null ? void 0 : De.toolInvocations
     );
@@ -6928,7 +6928,7 @@ function xf({
         credentials: f,
         onResponse: i,
         onUpdate({ message: E, data: b, replaceLastMessage: y }) {
-          O.value = "streaming", R([
+          w.value = "streaming", R([
             ...y ? c.slice(0, c.length - 1) : c,
             E
           ]), b?.length && (ie.value = [...p, ...b]);
@@ -6942,11 +6942,11 @@ function xf({
         fetch: x,
         // enabled use of structured clone in processChatResponse:
         lastMessage: Yr(c[c.length - 1])
-      }), O.value = "ready";
+      }), w.value = "ready";
     } catch (pt) {
       if (pt.name === "AbortError")
-        return re = null, O.value = "ready", null;
-      a && pt instanceof Error && a(pt), se.value = pt, O.value = "error";
+        return re = null, w.value = "ready", null;
+      a && pt instanceof Error && a(pt), se.value = pt, w.value = "error";
     } finally {
       re = null;
     }
@@ -7010,7 +7010,7 @@ function xf({
       messages: _e,
       toolCallId: Y,
       toolResult: ce
-    }), R(_e), O.value === "submitted" || O.value === "streaming")
+    }), R(_e), w.value === "submitted" || w.value === "streaming")
       return;
     const Ae = _e[_e.length - 1];
     zi(Ae) && ye(_e);
@@ -7026,9 +7026,9 @@ function xf({
     input: st,
     handleSubmit: Nt,
     isLoading: mo(
-      () => O.value === "submitted" || O.value === "streaming"
+      () => w.value === "submitted" || w.value === "streaming"
     ),
-    status: O,
+    status: w,
     data: ie,
     setData: xe,
     addToolResult: dt
@@ -7135,34 +7135,40 @@ const Sf = {
     const t = e, n = xf({
       // 修复API路径 - 移除错误的路径处理逻辑
       api: t.apiUrl.includes("/chat") ? t.apiUrl : t.apiUrl.replace("/assistant", "/chat"),
-      onToolCall: async ({ toolCall: w }) => {
-        if (console.log("[onToolCall] 工具被调用:", w), w.toolName === "navigateToPage") {
-          const O = w.args.path;
-          return console.log(`[onToolCall] 导航工具调用: ${O}`), D(O), { path: O, success: !0 };
+      onToolCall: async ({ toolCall: O }) => {
+        if (console.log("[onToolCall] 工具被调用:", O), O.toolName === "navigateToPage") {
+          const w = O.args.path;
+          return console.log(`[onToolCall] 导航工具调用: ${w}`), D(w), { path: w, success: !0 };
         }
-        if (w.toolName === "zoomInOnPhoto") {
-          const O = w.args.photoTitle;
-          return console.log(`[onToolCall] 图片放大工具调用: ${O}`), window.dispatchEvent(new CustomEvent("ai-zoom-photo", {
-            detail: { title: O },
+        if (O.toolName === "zoomInOnPhoto") {
+          const w = O.args.photoTitle;
+          return console.log(`[onToolCall] 图片放大工具调用: ${w}`), window.dispatchEvent(new CustomEvent("ai-zoom-photo", {
+            detail: { title: w },
             bubbles: !0,
             composed: !0
-          })), { title: O };
+          })), { title: w };
         }
-        if (w.toolName === "zoomOutPhoto") {
-          const O = w.args.action || "close";
-          return console.log(`[onToolCall] 图片缩小工具调用: ${O}`), window.dispatchEvent(new CustomEvent("ai-zoom-out-photo", {
-            detail: { action: O },
+        if (O.toolName === "zoomOutPhoto") {
+          const w = O.args.action || "close";
+          return console.log(`[onToolCall] 图片缩小工具调用: ${w}`), window.dispatchEvent(new CustomEvent("ai-zoom-out-photo", {
+            detail: { action: w },
             bubbles: !0,
             composed: !0
-          })), { action: O, success: !0 };
+          })), { action: w, success: !0 };
         }
         return {};
       }
-    }), r = n.messages, o = n.input, s = n.handleSubmit, i = n.isLoading, l = n.error, { isRecording: a, start: f, stop: d, error: u } = Df((w) => {
-      const O = w.trim();
-      if (["发送", "提交", "发出"].includes(O)) return void s();
-      if (["清空", "清除", "删除"].includes(O)) return void (o.value = "");
-      o.value = O;
+    }), r = n.messages, o = n.input, s = n.handleSubmit, i = n.isLoading, l = n.error, { isRecording: a, start: f, stop: d, error: u } = Df((O) => {
+      const w = O.trim();
+      if (["发送", "提交", "发出"].includes(w)) {
+        o.value.trim() ? (console.log("[语音指令] 执行发送"), s()) : console.log("[语音指令] 没有内容可发送");
+        return;
+      }
+      if (["清空", "清除", "删除"].includes(w)) {
+        console.log("[语音指令] 执行清除"), o.value = "";
+        return;
+      }
+      o.value = w, console.log(`[语音指令] 设置输入内容: "${w}"`);
     }), h = Fe(!1), m = xn({ x: 0, y: 0 }), x = Fe(null), V = Fe(null), z = Fe(!1);
     function L() {
       h.value = !h.value;
@@ -7170,33 +7176,33 @@ const Sf = {
     function j() {
       z.value || L();
     }
-    function P(w) {
-      return w.trim().startsWith("<audio");
+    function P(O) {
+      return O.trim().startsWith("<audio");
     }
     const K = mo(() => {
       if (!i.value) return !1;
-      const w = [...r.value].reverse().find((O) => O.role === "user");
-      return !!(w && /摇骰子|掷骰子/.test(w.content));
+      const O = [...r.value].reverse().find((w) => w.role === "user");
+      return !!(O && /摇骰子|掷骰子/.test(O.content));
     });
-    bt(r, async (w, O) => {
+    bt(r, async (O, w) => {
       await zn(), V.value && (V.value.scrollTop = V.value.scrollHeight);
     }, { deep: !0 });
-    function D(w) {
-      if (!w.startsWith("/")) {
-        console.error(`[Navigation] 无效路径: ${w}`);
+    function D(O) {
+      if (!O.startsWith("/")) {
+        console.error(`[Navigation] 无效路径: ${O}`);
         return;
       }
-      console.log(`[Navigation] 执行跳转到: ${w}`);
-      const O = new CustomEvent("ai-navigate", {
-        detail: { path: w },
+      console.log(`[Navigation] 执行跳转到: ${O}`);
+      const w = new CustomEvent("ai-navigate", {
+        detail: { path: O },
         bubbles: !0,
         composed: !0
       });
-      window.dispatchEvent(O), console.log(`[Navigation] 事件已派发: ${w}`);
+      window.dispatchEvent(w), console.log(`[Navigation] 事件已派发: ${O}`);
     }
-    bt(r, async (w, O) => {
-      if (!w || w.length === (O?.length || 0)) return;
-      const R = w[w.length - 1];
+    bt(r, async (O, w) => {
+      if (!O || O.length === (w?.length || 0)) return;
+      const R = O[O.length - 1];
       if (R) {
         if (console.log("最新消息对象结构:", JSON.stringify(R, null, 2)), R.role === "tool" && R.toolName)
           switch (R.toolName) {
@@ -7246,22 +7252,22 @@ const Sf = {
           }
         await zn(), V.value && (V.value.scrollTop = V.value.scrollHeight);
       }
-    }, { deep: !0 }), bt(l, (w) => {
-      w && console.error("[Assistant] An error occurred:", w);
-    }), bt(u, (w) => {
-      if (w && (console.error("[ASR] 语音识别错误:", w), V.value)) {
-        const O = document.createElement("div");
-        O.className = "msg-line msg-ai error-msg", O.textContent = `语音识别错误: ${w}`, V.value.appendChild(O), V.value.scrollTop = V.value.scrollHeight;
+    }, { deep: !0 }), bt(l, (O) => {
+      O && console.error("[Assistant] An error occurred:", O);
+    }), bt(u, (O) => {
+      if (O && (console.error("[ASR] 语音识别错误:", O), V.value)) {
+        const w = document.createElement("div");
+        w.className = "msg-line msg-ai error-msg", w.textContent = `语音识别错误: ${O}`, V.value.appendChild(w), V.value.scrollTop = V.value.scrollHeight;
       }
     });
-    function N(w) {
-      w.preventDefault();
-      const O = x.value, R = w.clientX, U = w.clientY, se = m.x, ie = m.y;
+    function N(O) {
+      O.preventDefault();
+      const w = x.value, R = O.clientX, U = O.clientY, se = m.x, ie = m.y;
       let re = !1;
       function ye(ae) {
         const B = ae.clientX - R, J = ae.clientY - U;
         if (!re && (Math.abs(B) > 5 || Math.abs(J) > 5) && (re = !0, z.value = !0), re) {
-          const xe = Math.min(Math.max(0, se + B), window.innerWidth - O.offsetWidth), st = Math.min(Math.max(0, ie + J), window.innerHeight - O.offsetHeight);
+          const xe = Math.min(Math.max(0, se + B), window.innerWidth - w.offsetWidth), st = Math.min(Math.max(0, ie + J), window.innerHeight - w.offsetHeight);
           m.x = xe, m.y = st;
         }
       }
@@ -7271,9 +7277,9 @@ const Sf = {
       document.addEventListener("mousemove", ye), document.addEventListener("mouseup", pe);
     }
     return lo(() => {
-      const w = x.value, O = 20;
-      m.x = window.innerWidth - w.offsetWidth - O, m.y = window.innerHeight - w.offsetHeight - O;
-    }), (w, O) => (Re(), $e("div", {
+      const O = x.value, w = 20;
+      m.x = window.innerWidth - O.offsetWidth - w, m.y = window.innerHeight - O.offsetHeight - w;
+    }), (O, w) => (Re(), $e("div", {
       ref_key: "containerRef",
       ref: x,
       class: "ai-bubble-container",
@@ -7312,7 +7318,7 @@ const Sf = {
           ])) : Qt("", !0)
         ], 512),
         gt("form", {
-          onSubmit: O[3] || (O[3] = as(
+          onSubmit: w[3] || (w[3] = as(
             //@ts-ignore
             (...R) => he(s) && he(s)(...R),
             ["prevent"]
@@ -7320,11 +7326,11 @@ const Sf = {
           class: "input-area"
         }, [
           pa(gt("textarea", {
-            "onUpdate:modelValue": O[0] || (O[0] = (R) => ue(o) ? o.value = R : null),
+            "onUpdate:modelValue": w[0] || (w[0] = (R) => ue(o) ? o.value = R : null),
             class: "input-text",
             rows: "1",
             placeholder: "请输入...",
-            onKeydown: O[1] || (O[1] = lu(as(
+            onKeydown: w[1] || (w[1] = lu(as(
               //@ts-ignore
               (...R) => he(s) && he(s)(...R),
               ["exact", "prevent"]
@@ -7335,7 +7341,7 @@ const Sf = {
           gt("button", {
             type: "button",
             class: fn(["btn-voice", { listening: he(a) }]),
-            onClick: O[2] || (O[2] = (R) => he(a) ? he(d)() : he(f)()),
+            onClick: w[2] || (w[2] = (R) => he(a) ? he(d)() : he(f)()),
             title: "语音输入"
           }, "🎤", 2),
           gt("button", {

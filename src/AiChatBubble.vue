@@ -111,9 +111,28 @@ const error = chatResult.error as import('vue').Ref<any>;
 // ... ASR 和其他 UI 逻辑保持不变 ...
 const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => {
   const t = text.trim()
-  if (['发送','提交','发出'].includes(t)) return void handleSubmit()
-  if (['清空','清除','删除'].includes(t)) return void (input.value = '')
+  
+  // 处理发送指令
+  if (['发送','提交','发出'].includes(t)) {
+    if (input.value.trim()) {
+      console.log('[语音指令] 执行发送')
+      handleSubmit()
+    } else {
+      console.log('[语音指令] 没有内容可发送')
+    }
+    return // 重要：直接返回，不执行后面的 input.value = t
+  }
+  
+  // 处理清除指令
+  if (['清空','清除','删除'].includes(t)) {
+    console.log('[语音指令] 执行清除')
+    input.value = ''
+    return // 重要：直接返回，不执行后面的 input.value = t
+  }
+  
+  // 其他情况：将识别的文本设置为输入内容
   input.value = t
+  console.log(`[语音指令] 设置输入内容: "${t}"`)
 })
 const isChatOpen = ref(false)
 const bubblePos = reactive({ x: 0, y: 0 })
