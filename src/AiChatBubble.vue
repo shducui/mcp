@@ -132,27 +132,27 @@ const isRollingDice = computed(() => {
 
 // 2. 增强 watch 方案，添加更详细的调试
 watch(messages, async (newMessages, oldMessages) => {
-  if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
+  // if (!newMessages || newMessages.length === (oldMessages?.length || 0)) return;
 
-  // 检查所有新增的消息
-  const newCount = newMessages.length;
-  const oldCount = oldMessages?.length || 0;
+  // // 检查所有新增的消息
+  // const newCount = newMessages.length;
+  // const oldCount = oldMessages?.length || 0;
   
-  for (let i = oldCount; i < newCount; i++) {
-    const message = newMessages[i];
-    console.log(`[Watcher] 检查消息 ${i}:`, JSON.stringify(message, null, 2));
+  // for (let i = oldCount; i < newCount; i++) {
+  //   const message = newMessages[i];
+  //   console.log(`[Watcher] 检查消息 ${i}:`, JSON.stringify(message, null, 2));
     
-    // 检查是否为助手消息且包含工具调用
-    if (message.role === 'assistant' && message.toolInvocations) {
-      console.log(`[Watcher] 发现助手工具调用:`, message.toolInvocations);
-      for (const invocation of message.toolInvocations) {
-        if (invocation.state === 'result') {
-          console.log(`[Watcher] 工具调用完成:`, invocation);
-          handleToolInvocation(invocation);
-        }
-      }
-    }
-  }
+  //   // 检查是否为助手消息且包含工具调用
+  //   if (message.role === 'assistant' && message.toolInvocations) {
+  //     console.log(`[Watcher] 发现助手工具调用:`, message.toolInvocations);
+  //     for (const invocation of message.toolInvocations) {
+  //       if (invocation.state === 'result') {
+  //         console.log(`[Watcher] 工具调用完成:`, invocation);
+  //         handleToolInvocation(invocation);
+  //       }
+  //     }
+  //   }
+  // }
 
   await nextTick();
   if (messagesContainerRef.value) {
@@ -161,29 +161,47 @@ watch(messages, async (newMessages, oldMessages) => {
 }, { deep: true });
 
 // 执行页面导航
-function executeNavigation(page: string) {
-  let targetPath = '/';
-  switch (page) {
-    case 'dashboard':
-    case 'home':
-    case 'index':
-      targetPath = '/dashboard';
-      break;
-    case 'admin':
-      targetPath = '/admin';
-      break;
-    default:
-      console.error(`[Navigation] 未知目标: ${page}`);
-      return;
+function executeNavigation(path: string) {
+  // 直接使用后端返回的路径，不需要转换
+  if (!path.startsWith('/')) {
+    console.error(`[Navigation] 无效路径: ${path}`);
+    return;
   }
   
-  console.log(`[Navigation] 执行跳转到: ${targetPath}`);
+  console.log(`[Navigation] 执行跳转到: ${path}`);
   
-  // 直接跳转，不保存任何状态
-  setTimeout(() => {
-    window.location.href = targetPath;
-  }, 100);
+  // 派发事件给React应用，而不是直接跳转
+  const event = new CustomEvent('ai-navigate', {
+    detail: { path },
+    bubbles: true,
+    composed: true
+  });
+  
+  window.dispatchEvent(event);
+  console.log(`[Navigation] 事件已派发: ${path}`);
 }
+//   let targetPath = '/';
+//   switch (page) {
+//     case 'dashboard':
+//     case 'home':
+//     case 'index':
+//       targetPath = '/dashboard';
+//       break;
+//     case 'admin':
+//       targetPath = '/admin';
+//       break;
+//     default:
+//       console.error(`[Navigation] 未知目标: ${page}`);
+//       return;
+//   }
+  
+//   console.log(`[Navigation] 执行跳转到: ${targetPath}`);
+  
+//   // 直接跳转，不保存任何状态
+//   setTimeout(() => {
+//     window.location.href = targetPath;
+//   }, 100);
+// }
 
 // 2. 保留原有的watch作为备用方案
 watch(messages, async (newMessages, oldMessages) => {
@@ -322,13 +340,13 @@ function handleToolInvocation(invocation: any) {
 
   switch (invocation.toolName) {
     case 'navigateToPage': {
-      const result = invocation.result as { page?: string };
-      if (result?.page) {
-        console.log(`[handleToolInvocation] 导航到页面: ${result.page}`);
-        executeNavigation(result.page);
-      }
-      break;
+    const result = invocation.result as { path?: string };  // ← 改为 path
+    if (result?.path) {  // ← 改为 path
+      console.log(`[handleToolInvocation] 导航到页面: ${result.path}`);  // ← 改为 path
+      executeNavigation(result.path);  // ← 改为 path
     }
+  break;
+}
     case 'zoomInOnPhoto': {
       const result = invocation.result as { title?: string };
       if (result?.title) {

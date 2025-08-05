@@ -48,37 +48,27 @@ export default defineEventHandler(async (event: H3Event) => {
 
       【可用路径列表】
       - '/dashboard': 主仪表板/首页
-      - '/dashboard/pms/safety/pyramid': 安全金字塔
-      - '/dashboard/pms/quality/fpy-daily': FPY日报
-      - '/dashboard/pms/output/unit-shift': 产量-单位-班次
-      - '/dashboard/pms/cost/manpower-shift': 成本-人力-班次
-      - '/admin': 管理后台首页
-      - '/admin/infrastructure/production-lines': 生产线管理
-      - '/admin/infrastructure/work-stations': 工作站管理
-      - '/admin/production/products': 产品管理
-      - '/admin/production/work-orders': 工单管理
-      - '/admin/system/users': 用户管理
-      - '/admin/system/roles': 角色管理
-      - '/admin/system/departments': 部门管理
+      - '/dashboard/rps': RPS管理
+      - '/dashboard/production-office': 生产办公室
+      - '/dashboard/workshop': 车间看板
       `,
       tools: {
         navigateToPage: tool({
           description: '用于将用户导航或跳转到网站的特定页面',
           parameters: z.object({
             path:z.enum([
-               '/dashboard',
-              '/dashboard/pms/safety/pyramid',
-              '/dashboard/pms/quality/fpy-daily',
-              '/dashboard/pms/output/unit-shift',
-              '/dashboard/pms/cost/manpower-shift',
-              '/admin',
-              '/admin/infrastructure/production-lines',
-              '/admin/infrastructure/work-stations',
-              '/admin/production/products',
-              '/admin/production/work-orders',
-              '/admin/system/users',
-              '/admin/system/roles',
-              '/admin/system/departments',
+              '/dashboard',
+              '/dashboard/rps',
+              '/dashboard/production-office',
+              '/dashboard/workshop',
+              // '/admin',
+              // '/admin/infrastructure/production-lines',
+              // '/admin/infrastructure/work-stations',
+              // '/admin/production/products',
+              // '/admin/production/work-orders',
+              // '/admin/system/users',
+              // '/admin/system/roles',
+              // '/admin/system/departments',
             ]).describe('目标页面的URL路径，必须从可用路径列表中严格选择。'),
           }),
           execute: async ({ path }) => {
