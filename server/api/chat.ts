@@ -1,138 +1,103 @@
 // server/api/chat.ts
 import { H3Event } from 'h3';
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, tool } from 'ai'; // 从 'ai' 核心包导入
+import { streamText, tool } from 'ai';
 import { z } from 'zod';
 
-// 从 runtimeConfig 读取 apiKey，这是 Nuxt 的最佳实践
-// const apiKey = useRuntimeConfig().deepseekApiKey;
+// 从 Nuxt 的 runtimeConfig 读取环境变量，这是最佳实践
 const apiKey = useRuntimeConfig().OPENAI_API_KEY;
 
-// const openai = createOpenAI({
-//   apiKey: apiKey, 
-//   baseURL: 'https://api.deepseek.com/v1',
-// });
-
+// 使用官方 OpenAI API
 const openai = createOpenAI({
-  apiKey: apiKey, 
-  baseURL: 'https://api.v3.cm/v1',
+  apiKey: apiKey,
 });
 
 export default defineEventHandler(async (event: H3Event) => {
-  // 确保 OPTIONS 预检请求能被正确处理
+  // --- 新增本地开发的 CORS 处理 ---
+  if (process.env.NODE_ENV === 'development') {
+    // 允许你的看板本地开发服务器的地址访问
+    setResponseHeaders(event, {
+      'Access-Control-Allow-Origin': 'http://localhost:3132', // ！！！请替换为您看板项目的实际端口
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    });
+  } // <-- 添加此大括号以结束 if 块
+
+  // 处理跨域预检请求
   if (event.node.req.method === 'OPTIONS') {
-    // 预检请求的处理可以交给 vercel.json，或者在这里简单处理
     event.node.res.statusCode = 204;
     event.node.res.end();
     return;
   }
   
-  const { messages } = await readBody(event);
-  console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
-  
-  // 移除消息清理逻辑，直接使用原始消息
   try {
-    // 使用最核心的 streamText 函数
+    const { messages } = await readBody(event);
+    console.log('[API/chat] 收到消息：', JSON.stringify(messages, null, 2));
+
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY 未在服务器端配置！");
+    }
+
     const result = await streamText({
-      model: openai('gpt-4'),
+      model: openai('gpt-4o'),
       messages,
-      maxSteps: 5, // 添加这个参数，允许AI在工具调用后继续生成响应
-      system:`
-你是网站智能助手。
+      system: `你是一个部署在名为 "KANBAN" 的复杂生产管理系统中的智能助手。
+      你的核心任务是根据用户的语音或文字指令，调用工具来快速导航到系统的各个功能页面。
 
-**重要：当你调用任何工具后，必须立即向用户报告工具执行的结果，不要等待用户追问。**
+      【指令规则】
+      1. 当用户的意图是导航、跳转、打开、查看任何一个功能页面时，你 **必须** 使用 'navigateToPage' 工具。
+      2. 你必须从下面的可用路径列表中选择一个完全匹配的路径作为参数。**严禁** 编造路径或猜测路径。
+      3. 例如：用户说“带我去看用户管理”，你应该调用工具并传入路径 '/admin/system/users'。用户说“首页”或“仪表板”，你应该传入 '/dashboard'。
+      4. 完成工具调用后，用简洁的语言确认操作即可。
 
-**当用户要求跳转页面时，必须调用 navigateToPage 工具**，参数 pageName 必须是：
-  portfolio, about, contact, blog, archives
-
-用户说"跳转到关于我"、"关于我"、"about"时，调用 navigateToPage 工具，参数为 "about"
-用户说"跳转到首页"、"主页"、"portfolio"时，调用 navigateToPage 工具，参数为 "portfolio"  
-用户说"跳转到联系方式"、"联系"、"contact"时，调用 navigateToPage 工具，参数为 "contact"
-
-**当用户要求放大图片时，调用 zoomInOnPhoto 工具**
-**当用户要求缩小图片、关闭图片、恢复图片等时，调用 zoomOutPhoto 工具**
-
-**摇骰子工具使用后，必须告诉用户具体的点数结果和总数。**
-
-跳转成功后，不要说"页面已跳转"之类的话，而是要根据当前页面内容来回应用户。
-`,
+      【可用路径列表】
+      - '/dashboard': 主仪表板/首页
+      - '/dashboard/pms/safety/pyramid': 安全金字塔
+      - '/dashboard/pms/quality/fpy-daily': FPY日报
+      - '/admin': 管理后台首页
+      - '/admin/system/users': 用户管理
+      - '/admin/system/roles': 角色管理
+      - '/admin/system/departments': 部门管理
+      - '/admin/production/products': 产品管理
+      - '/admin/production/work-orders': 工单管理`,
       tools: {
-        navigateToPage: tool({
-          description: '用于将用户导航或跳转到网站的特定页面',
+        navigateToPage: {
+          description: '用于将用户导航或跳转到看板系统的某个特定功能页面。',
           parameters: z.object({
-            pageName: z.enum(['portfolio', 'about', 'contact', 'blog', 'archives']),
+            path: z.enum([
+              '/dashboard',
+              '/dashboard/pms/safety/pyramid',
+              '/dashboard/pms/quality/fpy-daily',
+              '/admin',
+              '/admin/system/users',
+              '/admin/system/roles',
+              '/admin/system/departments',
+              '/admin/production/products',
+              '/admin/production/work-orders',
+            ]).describe('目标页面的URL路径，必须从可用路径列表中严格选择。'),
           }),
-          execute: async ({ pageName }) => {
-            console.log(`[ToolExecuted][navigateToPage] pageName = ${pageName}`);
-            return { page: pageName, success: true };
+          execute: async ({ path }) => {
+            console.log(`[ToolExecuted][navigateToPage] path = ${path}`);
+            return { path: path };
           },
-        }),
-        zoomInOnPhoto: tool({
-          description: '用于放大显示用户指定的某一张照片',
+        },
+        // 如果看板项目有图片展示功能，可以保留此工具
+        zoomInOnPhoto: {
+          description: '用于放大显示用户指定的某一张照片。',
           parameters: z.object({
             photoTitle: z.string().describe('照片的标题'),
           }),
-          execute: async ({ photoTitle }) => {
-            console.log(`[ToolExecuted][zoomInOnPhoto] photoTitle = ${photoTitle}`);
-            return { title: photoTitle };
-          },
-        }),
-        zoomOutPhoto: tool({
-          description: '用于缩小或关闭当前放大的图片，恢复到正常显示状态',
-          parameters: z.object({
-            action: z.enum(['close', 'restore']).optional().describe('操作类型：关闭或恢复'),
-          }),
-          execute: async ({ action = 'close' }) => {
-            console.log(`[ToolExecuted][zoomOutPhoto] action = ${action}`);
-            return { action, success: true };
-          },
-        }),
-        add: tool({
-          description: '计算两个数字的和。',
-          parameters: z.object({
-            a: z.number().describe('第一个数字'),
-            b: z.number().describe('第二个数字'),
-          }),
-          execute: async ({ a, b }) => {
-            console.log(`[Tool Executed] add: a=${a}, b=${b}`);
-            return { result: a + b };
-          },
-        }),
-
-        rollDice: tool({
-          description: '摇一个或多个六面骰子，并返回结果。调用后必须向用户报告具体的点数。',
-          parameters: z.object({
-            count: z.number().min(1).max(100).describe('要摇的骰子数量'),
-          }),
-          execute: async ({ count }) => {
-            console.log(`[Tool Executed] rollDice: count=${count}`);
-            const results = [];
-            let total = 0;
-            for (let i = 0; i < count; i++) {
-              const roll = Math.floor(Math.random() * 6) + 1;
-              results.push(roll);
-              total += roll;
-            }
-            // 返回一个结构化的结果
-            return {
-              count,
-              results,
-              total,
-            };
-          },
-        }),
-
+          execute: async ({ photoTitle }) => ({ title: photoTitle }),
+        },
       },
-      // 工具调用轮次配置已移除，避免类型错误
     });
 
     console.log('[API/chat] 已调用 streamText，准备返回流');
     return result.toDataStreamResponse();
-  } catch (error) {
-    console.error('[API/chat] StreamText 错误:', error);
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'AI处理失败，请重试'
-    });
+
+  } catch (error: any) {
+    console.error('[API/chat] 发生严重错误:', error);
+    event.node.res.statusCode = 500;
+    event.node.res.end(JSON.stringify({ error: 'Internal Server Error', details: error.message }));
   }
 });
