@@ -3,11 +3,12 @@ import { H3Event } from 'h3';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, tool } from 'ai'; // 从 'ai' 核心包导入
 import { z } from 'zod';
+import fetch from 'node-fetch'; 
 
 // 从 runtimeConfig 读取 apiKey，这是 Nuxt 的最佳实践
 // const apiKey = useRuntimeConfig().deepseekApiKey;
 const apiKey = useRuntimeConfig().OPENAI_API_KEY;
-
+const kanbanApiBaseUrl = 'http://localhost:3132';
 // const openai = createOpenAI({
 //   apiKey: apiKey, 
 //   baseURL: 'https://api.deepseek.com/v1',
@@ -17,6 +18,35 @@ const openai = createOpenAI({
   apiKey: apiKey, 
   baseURL: 'https://api.v3.cm/v1',
 });
+
+
+// 定义一个通用的API调用函数，用于和看板API交互
+async function callKanbanApi(endpoint: string, params: Record<string, string> = {}) {
+  if (!kanbanApiBaseUrl) {
+    throw new Error('KANBAN_API_BASE_URL 环境变量未设置');
+  }
+  
+  const queryParams = new URLSearchParams(params);
+  const url = `${kanbanApiBaseUrl}${endpoint}?${queryParams.toString()}`;
+  console.log(`[Kanban API Caller] Calling: ${url}`);
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`API请求失败，状态码: ${response.status}`);
+    }
+    const result = await response.json() as { success: boolean; error?: string; data?: any };
+    if (!result.success) {
+      throw new Error(`API返回错误: ${result.error}`);
+    }
+    return result.data; // 直接返回data字段的内容
+  } catch (error) {
+    const errorMessage = (error instanceof Error) ? error.message : String(error);
+    console.error(`[Kanban API Caller] 调用失败: ${errorMessage}`);
+    return { error: `无法获取数据: ${errorMessage}` };
+  }
+}
+
 
 export default defineEventHandler(async (event: H3Event) => {
   // 确保 OPTIONS 预检请求能被正确处理
@@ -45,6 +75,11 @@ export default defineEventHandler(async (event: H3Event) => {
       2. 你必须从下面的可用路径列表中选择一个完全匹配的路径作为参数。**严禁** 编造路径或猜测路径。
       3. 例如：用户说“带我去看用户管理”，你应该调用工具并传入路径 '/admin/system/users'。用户说“首页”或“仪表板”，你应该传入 '/dashboard'。
       4. 完成工具调用后，用简洁的语言确认操作即可。
+      5. 当用户询问概览、统计或整体情况时，调用 'getDashboardStats' 工具。
+      6. 当用户询问具体的工单列表或按状态查询工单时，调用 'getWorkOrders' 工具。
+      7. 当用户询问某个生产线的具体情况时，可以将生产线ID作为参数传给相应工具。
+      8. 获取到JSON数据后，你需要将其中的关键信息（如总数、状态分布、效率等）提炼出来，形成一段通俗易懂的总结。
+      9. 在总结后，可以建议用户导航到相关的看板页面查看图表。
 
       【可用路径列表】
       - '/dashboard': 主仪表板/首页
@@ -53,6 +88,39 @@ export default defineEventHandler(async (event: H3Event) => {
       - '/dashboard/workshop': 车间看板
       `,
       tools: {
+
+         getDashboardStats: {
+          description: '获取仪表板的全局实时统计数据，包括工单总数、各状态工单数量、工作站状态分布、生产效率等。',
+          parameters: z.object({
+            // 参照API文档，可以添加 startDate, endDate, lineId 等可选参数
+            lineId: z.string().optional().describe('可选的生产线ID，用于筛选特定生产线的数据'),
+          }),
+          execute: async ({ lineId }) => {
+            const params: Record<string, string> = {};
+            if (lineId) params.lineId = lineId;
+            // 调用 /api/dashboard/stats 接口
+            return await callKanbanApi('/api/dashboard/stats', params);
+          },
+        },
+        // 工具二：获取工单列表
+        getWorkOrders: {
+          description: '获取工单列表，支持按状态、优先级等条件进行筛选。',
+          parameters: z.object({
+            status: z.enum(['PENDING', 'RUNNING', 'PAUSED', 'COMPLETED', 'CANCELLED']).optional().describe('工单状态筛选'),
+            priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional().describe('工含优先级筛选'),
+            lineId: z.string().optional().describe('生产线ID筛选'),
+          }),
+          execute: async ({ status, priority, lineId }) => {
+            const params: Record<string, string> = {};
+            if (status) params.status = status;
+            if (priority) params.priority = priority;
+            if (lineId) params.lineId = lineId;
+            // 调用 /api/production/work-orders 接口
+            return await callKanbanApi('/api/production/work-orders', params);
+          },
+        },
+
+
         navigateToPage: tool({
           description: '用于将用户导航或跳转到网站的特定页面',
           parameters: z.object({
