@@ -1,4 +1,3 @@
-// composables/useAudioRecorder.ts
 import { ref, readonly } from 'vue';
 
 export function useAudioRecorder(onTranscriptionComplete: (text: string) => void) {
