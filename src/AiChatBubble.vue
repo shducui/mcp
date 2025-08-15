@@ -68,7 +68,7 @@
 <script setup lang="ts"> 
 import { useChat } from '@ai-sdk/vue' 
 import { ref, watch, reactive, computed, onMounted, nextTick } from 'vue' 
-import { useAudioRecorder } from '../composables/useAudioRecorder' 
+import { useAudioRecorder } from '../composables/useAudioRecorder'
 
 // const isStreamSpeaking = ref(false);
 // const lastSpokenLength = ref(0);
@@ -209,12 +209,10 @@ const isLoading = chatResult.isLoading as import('vue').Ref<boolean>;
 const error = chatResult.error as import('vue').Ref<any>; 
 
 // ... ASR 和其他 UI 逻辑保持不变 ... 
-const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) => { 
+const { isRecording, start, stop, error: asrError } = useAudioRecorder((text: string) => { 
   const t = text.trim(); 
-  
   // 1.  优先处理前端直接操作指令 
   //     如果匹配成功，则执行动作并用 `return` 立即终止函数，避免后续操作。 
-  
   //  处理“发送”指令： 
   if (['发送', '提交', '发出','发送。','提交。', '发出。'].includes(t)) { 
     if (input.value.trim()) { 
@@ -227,17 +225,23 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
     } 
     return; //  <--- 关键：处理完后必须 return 
   } 
-  
   //  处理“清空”指令： 
   if (['清空', '清除', '删除','清除。','清空。','删除。'].includes(t)) { 
-    console.log('[语音指令] 执行清空'); 
-    input.value = ''; 
+    console.log('[语音指令] 执行清空历史对话'); 
+    // 🔧 清空对话历史，而不只是输入框
+    messages.value.length = 0;
+    input.value = '';
+    // 清空本地存储的历史记录
+    localStorage.removeItem(STORAGE_KEY);
+    saveConversationHistory(); // 保存清空状态 
     return; //  <--- 关键：处理完后必须 return 
   } 
 
    if (['停止播报', '停止', '别说了', '安静'].includes(t)) { 
     console.log('[语音指令] 执行停止播报（不改变模式）'); 
     stopSpeechPlayback(); 
+    // 🔧 清空输入框，确保没有残留内容
+    input.value = '';
     return; // 直接在前端处理，不发送给AI 
   } 
   
@@ -247,6 +251,8 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
     if (isGlobalSpeechMode.value) {
       toggleGlobalSpeech(); // 调用现有的切换函数
     }
+    // 🔧 清空输入框，确保没有残留内容
+    input.value = '';
     return; // 直接在前端处理，不发送给AI
   }
   
@@ -287,8 +293,22 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
     return; 
   } 
 
-  console.log(`[语音指令] 设置输入内容: "${t}"`); 
-  input.value = t; 
+  console.log(`[语音指令] 设置输入内容并自动发送: "${t}"`); 
+  
+  // 🆕 直接使用接收到的文本进行发送，不依赖于输入框状态
+  if (t.trim()) {
+    // 先设置输入框内容
+    input.value = t;
+    console.log('[自动发送] 执行自动发送，内容:', t);
+    
+    // 立即发送
+    nextTick(() => {
+      handleSubmit();
+    });
+  } else {
+    console.log('[自动发送] 文本为空，跳过自动发送');
+  }
+
 }); 
   
 
