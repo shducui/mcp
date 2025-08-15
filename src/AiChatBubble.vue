@@ -58,7 +58,7 @@
       </div> 
       <form @submit.prevent="handleSubmit" class="input-area"> 
         <textarea v-model="input" class="input-text" rows="1" placeholder="请输入..." @keydown.enter.exact.prevent="handleSubmit"></textarea> 
-        <button type="button" class="btn-voice" :class="{ listening: isRecording }" @click="isRecording ? stop() : start()" title="语音输入">🎤</button> 
+        <button type="button" class="btn-voice" :class="{ listening: isRecording }" @click="toggleMicrophone" :title="isMicrophonePersistent ? '录音中（点击关闭）' : '点击开启持久录音'">🎤</button> 
         <button type="submit" class="btn-send" :disabled="isLoading || !input.trim()">➤</button> 
       </form> 
     </div> 
@@ -85,7 +85,8 @@ const STORAGE_KEY = 'ai-chat-bubble-data'
 const POSITION_KEY = 'ai-chat-bubble-position'
 const STORAGE_EXPIRE_HOURS = 24
 
-const isGlobalSpeechMode = ref(false); 
+const isGlobalSpeechMode = ref(false);
+const isMicrophonePersistent = ref(false); // 🆕 麦克风持久化状态 
 
 const currentUtterance = ref<SpeechSynthesisUtterance | null>(null);
 // 1. 回归 useChat 
@@ -105,6 +106,7 @@ type StoredData = {
   timestamp: number
   speechMode: boolean
   chatOpen: boolean
+  microphonePersistent: boolean // 🆕 麦克风持久化状态
 }
 
 type StoredPosition = {
@@ -239,6 +241,42 @@ const { isRecording, start, stop, error: asrError } = useAudioRecorder((text) =>
     return; // 直接在前端处理，不发送给AI 
   } 
   
+  // 🆕 处理"朗读关闭"指令：
+  if (['朗读关闭', '关闭朗读', '朗读关闭。', '关闭朗读。','朗读，关闭','朗读，关闭。'].includes(t)) {
+    console.log('[语音指令] 执行朗读关闭');
+    if (isGlobalSpeechMode.value) {
+      toggleGlobalSpeech(); // 调用现有的切换函数
+    }
+    return; // 直接在前端处理，不发送给AI
+  }
+  
+  // 🆕 处理"结束对话"指令：
+  if (['结束对话', '结束', '再见', '拜拜', '结束对话。', '结束。', '再见。', '拜拜。'].includes(t)) {
+    console.log('[语音指令] 执行结束对话，立即退出持久化模式');
+    
+    // 立即退出持久化模式，阻止任何自动重启
+    isMicrophonePersistent.value = false
+    console.log('[麦克风] 已设置持久化模式为 false')
+    
+    // 强制停止录音
+    if (isRecording.value) {
+      console.log('[麦克风] 强制停止录音')
+      stop()
+    }
+    
+    // 保存状态
+    saveConversationHistory()
+    console.log('[麦克风] 已保存关闭状态，后续页面刷新将保持关闭状态')
+    
+    // 延迟发送，确保状态已经保存
+    setTimeout(() => {
+      input.value = t;
+      nextTick(() => handleSubmit());
+    }, 100);
+    
+    return;
+  } 
+  
   // 组合指令 
   if (t.endsWith('发送') && t.length > 2) { 
     const content = t.slice(0, -2).trim(); 
@@ -267,6 +305,24 @@ function toggleChat() {
 }
 function handleBubbleClick() { if (!isDragging.value) toggleChat() }
 
+// 🆕 麦克风切换函数 - 简化为两种状态：开启持久录音 或 完全关闭
+function toggleMicrophone() {
+  if (isMicrophonePersistent.value) {
+    // 当前是持久化状态，退出持久化模式
+    stop()
+    isMicrophonePersistent.value = false
+    console.log('[麦克风] 退出持久化模式，后续页面刷新将保持关闭状态')
+  } else {
+    // 当前是关闭状态，开启持久化录音
+    start()
+    isMicrophonePersistent.value = true
+    console.log('[麦克风] 开启持久化录音模式')
+  }
+  
+  // 🆕 保存麦克风状态（包括关闭状态）
+  saveConversationHistory()
+}
+
 // 🆕 本地存储相关函数
 function saveConversationHistory() {
   try {
@@ -274,7 +330,8 @@ function saveConversationHistory() {
       messages: messages.value,
       timestamp: Date.now(),
       speechMode: isGlobalSpeechMode.value,
-      chatOpen: isChatOpen.value
+      chatOpen: isChatOpen.value,
+      microphonePersistent: isMicrophonePersistent.value // 🆕 保存麦克风状态
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
     console.log(`[存储] 已保存 ${messages.value.length} 条对话记录`)
@@ -322,6 +379,23 @@ function restoreConversationHistory() {
     if (typeof data.chatOpen === 'boolean') {
       isChatOpen.value = data.chatOpen
       console.log(`[存储] 已恢复对话框状态: ${data.chatOpen}`)
+    }
+
+    // 🆕 恢复麦克风持久化状态
+    if (typeof data.microphonePersistent === 'boolean') {
+      isMicrophonePersistent.value = data.microphonePersistent
+      console.log(`[存储] 已恢复麦克风状态: ${data.microphonePersistent}`)
+      
+      // 只有在明确是持久化模式时，才开启录音
+      if (data.microphonePersistent === true) {
+        console.log('[存储] 恢复持久化录音模式，立即开启录音')
+        nextTick(() => {
+          start() // 立即开启麦克风
+        })
+      } else {
+        // 如果是关闭状态，确保麦克风保持关闭
+        console.log('[存储] 保持麦克风关闭状态')
+      }
     }
 
   } catch (error) {
@@ -391,13 +465,19 @@ function clearHistory() {
     // 清除输入框
     input.value = ''
     
+    // 🆕 退出持久化模式并停止麦克风
+    if (isRecording.value) {
+      stop()
+    }
+    isMicrophonePersistent.value = false
+    
     // 清除本地存储
     localStorage.removeItem(STORAGE_KEY)
     
     // 停止当前播报
     stopSpeechPlayback()
     
-    console.log('[清除历史] 对话历史已完全清除')
+    console.log('[清除历史] 对话历史已完全清除，麦克风已退出持久化模式')
   }
 }
 // function isAudioUrl(c: string) { return c.trim().startsWith('<audio') } 
@@ -485,6 +565,35 @@ watch(isGlobalSpeechMode, (newMode) => {
 // 🆕 监听对话框开关状态
 watch(isChatOpen, (newState) => {
   saveConversationHistory()
+})
+
+// 🆕 监听麦克风持久化状态变化
+watch(isMicrophonePersistent, (newState) => {
+  console.log(`[麦克风] 持久化状态变更为: ${newState}`)
+  saveConversationHistory()
+})
+
+// 🆕 监听录音状态变化，确保状态同步
+watch(isRecording, (newState, oldState) => {
+  console.log(`[麦克风] 录音状态变更: ${oldState} -> ${newState}`)
+  
+  // 只有在持久化模式开启时，且录音意外停止时，才会自动重新开启录音
+  if (!newState && isMicrophonePersistent.value) {
+    console.log('[麦克风] 录音停止，检查是否需要重新开启')
+    
+    // 短暂延迟后重新开启，避免死循环
+    setTimeout(() => {
+      // 多重检查：确保仍然是持久化模式、未录音
+      if (isMicrophonePersistent.value && !isRecording.value) {
+        console.log('[麦克风] 持久化模式仍然开启，重新启动录音')
+        start()
+      } else {
+        console.log(`[麦克风] 不重新启动录音 - 持久化: ${isMicrophonePersistent.value}, 录音中: ${isRecording.value}`)
+      }
+    }, 1000)
+  } else if (!newState && !isMicrophonePersistent.value) {
+    console.log('[麦克风] 录音正常停止，不在持久化模式中')
+  }
 })
 
 
@@ -619,6 +728,8 @@ function executeNavigation(path: string) {
     console.error('[Navigation] 跳转路径无效:', path);
   }
 }
+
+
 </script> 
 
 <style> 

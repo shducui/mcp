@@ -164,8 +164,8 @@ export default defineEventHandler(async (event: H3Event) => {
 
 🔊 **语音播报规则**：
 1. **模式控制**：
-   - 当用户说"开启语音模式"时，调用 toggleSpeechMode 工具设为 'on'
-   - 当用户说"关闭语音模式"时，调用 toggleSpeechMode 工具设为 'off'
+   - 当用户说"朗读开启"时，调用 toggleSpeechMode 工具设为 'on'
+   - 当用户说"朗读关闭"时，调用 toggleSpeechMode 工具设为 'off'
    - 开启语音模式后，前端会自动处理所有回答的语音播报
 
 2. **单次播报**：
@@ -305,66 +305,6 @@ export default defineEventHandler(async (event: H3Event) => {
           },
         }),
 
-        // Kanban 连接测试工具
-        testKanbanConnection: tool({
-          description: '测试与Kanban系统的连接状态',
-          parameters: z.object({}),
-          execute: async () => {
-            console.log('[Tool Executed] testKanbanConnection: 测试Kanban连接');
-            try {
-              // 使用已知存在的API端点进行测试
-              const testEndpoints = [
-                '/api/ignition/andon-department',
-                '/api/data/empty'
-              ];
-              
-              const results = [];
-              
-              for (const endpoint of testEndpoints) {
-                try {
-                  const response = await fetch(`${kanbanApiBaseUrl}${endpoint}`);
-                  const status = response.status;
-                  const text = await response.text();
-                  
-                  console.log(`[测试] ${endpoint} - 状态码: ${status}`);
-                  console.log(`[测试] ${endpoint} - 响应: ${text.substring(0, 100)}...`);
-                  
-                  results.push({
-                    endpoint,
-                    status,
-                    success: response.ok,
-                    response: text.substring(0, 100)
-                  });
-                } catch (err) {
-                  results.push({
-                    endpoint,
-                    status: 'ERROR',
-                    success: false,
-                    error: err instanceof Error ? err.message : String(err)
-                  });
-                }
-              }
-              
-              const allSuccess = results.every(r => r.success);
-              
-              return {
-                success: true,
-                connection: allSuccess,
-                message: `Kanban系统连接${allSuccess ? '正常' : '部分异常'}`,
-                testResults: results
-              };
-            } catch (error) {
-              return {
-                success: false,
-                connection: false,
-                error: error instanceof Error ? error.message : String(error),
-                message: 'Kanban系统连接测试失败'
-              };
-            }
-          },
-        }),
-
-        // Kanban 看板查询工具
         queryWorkOrderInfo: tool({
           description: '查询指定工单的完整信息，包括关联的产品、生产线、物料、日志等所有相关数据',
           parameters: z.object({
@@ -424,141 +364,6 @@ export default defineEventHandler(async (event: H3Event) => {
                 success: false,
                 error: error instanceof Error ? error.message : String(error),
                 message: '安灯部门列表获取失败'
-              };
-            }
-          },
-        }),
-
-        queryAndonReasons: tool({
-          description: '获取安灯系统的所有报警原因列表及其分类信息',
-          parameters: z.object({}),
-          execute: async () => {
-            console.log('[Tool Executed] queryAndonReasons: 获取安灯原因列表');
-            try {
-              const data = await callKanbanApi('/api/ignition/andon-reason');
-              
-              if (data && data.error) {
-                return {
-                  success: false,
-                  error: data.error,
-                  message: `安灯原因列表获取失败: ${data.error}`
-                };
-              }
-              
-              return {
-                success: true,
-                data: data,
-                message: '安灯原因列表获取成功'
-              };
-            } catch (error) {
-              return {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-                message: '安灯原因列表获取失败'
-              };
-            }
-          },
-        }),
-
-        queryAndonHistory: tool({
-          description: '获取安灯系统的历史记录',
-          parameters: z.object({}),
-          execute: async () => {
-            console.log('[Tool Executed] queryAndonHistory: 获取安灯历史记录');
-            try {
-              const data = await callKanbanApi('/api/ignition/andon-history');
-              
-              if (data && data.error) {
-                return {
-                  success: false,
-                  error: data.error,
-                  message: `安灯历史记录获取失败: ${data.error}`
-                };
-              }
-              
-              return {
-                success: true,
-                data: data,
-                message: '安灯历史记录获取成功'
-              };
-            } catch (error) {
-              return {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-                message: '安灯历史记录获取失败'
-              };
-            }
-          },
-        }),
-
-        queryHourlyOutput: tool({
-          description: '获取指定工单在特定产线和工站的24小时产量跟踪数据',
-          parameters: z.object({
-            workOrder: z.string().describe('工单号，例如：PWO20250806001'),
-            workStation: z.string().describe('工站名称，例如：OP10'),
-            line: z.string().describe('产线名称，例如：LINE001'),
-          }),
-          execute: async ({ workOrder, workStation, line }) => {
-            console.log(`[Tool Executed] queryHourlyOutput: 查询产量数据 - 工单:${workOrder}, 工站:${workStation}, 产线:${line}`);
-            try {
-              // 修复参数传递方式
-              const data = await callKanbanApi('/api/ignition/hourly-output', {
-                workOrder,
-                workStation,
-                line
-              });
-              
-              if (data && data.error) {
-                return {
-                  success: false,
-                  error: data.error,
-                  message: `24小时产量数据获取失败: ${data.error}`
-                };
-              }
-              
-              return {
-                success: true,
-                data: data,
-                message: `工单 ${workOrder} 在 ${line}-${workStation} 的24小时产量数据获取成功`
-              };
-            } catch (error) {
-              return {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-                message: `24小时产量数据获取失败`
-              };
-            }
-          },
-        }),
-
-        queryEmptyDataStructure: tool({
-          description: '获取各种数据类型的空结构模板，用于了解数据格式',
-          parameters: z.object({
-            type: z.enum(['work-order', 'material-batch', 'production-line', 'user', 'product', 'quality-record', 'andon-report', 'collection']).optional().describe('数据类型，不指定则返回通用空结构'),
-          }),
-          execute: async ({ type }) => {
-            console.log(`[Tool Executed] queryEmptyDataStructure: 获取空数据结构 - type:${type || '通用'}`);
-            try {
-              const data = await callKanbanApi('/api/data/empty', type ? { type } : {});
-              
-              if (data && data.error) {
-                return {
-                  success: false,
-                  error: data.error,
-                  message: `空数据结构获取失败: ${data.error}`
-                };
-              }
-              
-              return {
-                success: true,
-                data: data,
-                message: `${type || '通用'}空数据结构获取成功`
-              };
-            } catch (error) {
-              return {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-                message: '空数据结构获取失败'
               };
             }
           },

@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    KANBAN_SESSION_COOKIE: process.env.KANBAN_SESSION_COOKIE,
   },
 
   modules: [
